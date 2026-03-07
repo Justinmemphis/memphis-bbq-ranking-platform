@@ -51,3 +51,5 @@ Key requirements:
 - Cognito Hosted UI is used for MVP; custom auth UI is optional future work.
 - A `users` table is not needed — Cognito is the identity store; `sub` is the user key everywhere.
 - Realtime leaderboard (WebSockets/AppSync) is explicitly out of scope for Phase 1–2 but the data model is designed to support it.
+- WAF and GuardDuty are prod-only. Dev uses API Gateway throttling and Cognito auth for abuse protection. This keeps dev cost at ~$0 and reduces operational noise during development.
+- SSM Parameter Store Standard is used for all secrets. Secrets Manager is not used — automatic rotation is not required for this project.

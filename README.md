@@ -26,7 +26,8 @@ _The BBQ is a Trojan horse. The real demo is the infrastructure, security postur
 - **Auth:** Cognito (user pools, JWT, `sub` as identity, email as attribute)
 - **Frontend:** S3 + CloudFront
 - **IaC:** Terraform
-- **CI/CD:** GitHub Actions + OIDC / SSM (no long-lived keys)
+- **CI/CD:** GitHub Actions + OIDC (no long-lived keys)
+- **Secrets:** SSM Parameter Store Standard (no Secrets Manager — rotation not required)
 - **Environments:** dev and prod (`infra/envs/dev`, `infra/envs/prod`)
 - **AWS Region:** us-east-1 exclusively
 - **Single AWS account**

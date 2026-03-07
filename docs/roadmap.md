@@ -131,7 +131,7 @@ Abuse controls (user-submitted content):
 
 Edge + infra security:
 - [ ] CloudFront + WAF: common threat protections (OWASP rule set), rate limits
-- [ ] Secrets in AWS Secrets Manager / SSM Parameter Store — no plaintext config anywhere
+- [ ] Secrets in SSM Parameter Store Standard — no plaintext config anywhere (Secrets Manager not used)
 - [ ] No public RDS / no direct DB access from internet
 - [ ] Security groups locked to least required access
 

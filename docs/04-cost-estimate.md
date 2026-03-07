@@ -39,12 +39,12 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 | Service | Added/Changed | Monthly Cost |
 |---|---|---|
 | **AWS WAF** | 1 Web ACL on CloudFront; AWS Managed Rule Groups (free); ~3K requests/month | **~$5.00/month** (Web ACL: $5/month; requests negligible at this volume) |
-| **Secrets Manager** | Optional: only if rotation is required | **$0.40/secret/month** — use SSM Standard instead where rotation is not needed |
+| ~~**Secrets Manager**~~ | Not used — decided | $0.00 — SSM Parameter Store Standard used for all secrets |
 
 **Phase 3 estimated addition: ~$5.00/month**
 **Phase 3 cumulative total: ~$5.50–6.00/month**
 
-> WAF is the first meaningful cost in this architecture. It earns its place as a portfolio signal (rate limiting, OWASP managed rules, CloudFront integration). To minimize cost during development, attach WAF only to prod CloudFront; omit from dev.
+> WAF is the first meaningful cost in this architecture. Prod only — decided.
 
 > **Recommendation:** Use SSM Parameter Store Standard (no per-parameter charge) for all secrets unless automatic rotation is required. Secrets Manager adds $0.40/secret/month and is justified only when rotation is needed.
 
@@ -94,12 +94,12 @@ For services that charge per resource (not per request), running both dev and pr
 
 | Service | Dev | Prod | Notes |
 |---|---|---|---|
-| WAF Web ACL | $5/month | $5/month | Omit from dev to save $5/month |
-| GuardDuty | $1–3/month | $1–3/month | Enable only in prod for portfolio purposes |
+| WAF Web ACL | not deployed | $5/month | Prod only — decided |
+| GuardDuty | not deployed | $1–3/month | Prod only — decided |
 | CloudWatch Alarms | ~$0.30/month | ~$0.30/month | Small; acceptable to run in both |
 | Everything else | ~$0 | ~$0 | Request-based; negligible at this volume |
 
-**Recommendation:** Attach WAF only to the prod CloudFront distribution. Dev relies on API Gateway throttling and Cognito auth for abuse protection during development.
+**Decision:** WAF and GuardDuty on prod only. Dev relies on API Gateway throttling and Cognito auth. Saves ~$6–8/month and keeps dev lightweight.
 
 ---
 
