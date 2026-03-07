@@ -211,12 +211,14 @@ Observability:
 
 ### Friday (Sprint 2 — CI/CD + OIDC)
 
-- [ ] Create GitHub OIDC trust relationship in AWS
-- [ ] Create IAM role for GitHub Actions (least privilege)
-- [ ] Write GitHub Actions workflow: `terraform fmt`, `terraform validate`, `terraform plan`
-- [ ] `plan` triggers on PR; no static credentials used
+- [x] GitHub OIDC provider imported into Terraform state (pre-existed from another project)
+- [x] IAM role `bbq-github-actions` created — trust scoped to this repo only
+- [x] IAM policy: least privilege covering Terraform state (S3 + DynamoDB lock) and DynamoDB app tables
+- [x] `infra/github-oidc/` Terraform root committed with separate state key
+- [x] `AWS_OIDC_ROLE_ARN` secret added to GitHub Actions
+- [x] Pipeline triggered on PR — OIDC auth succeeded, `terraform plan` passed, no static credentials
 
-**Definition of done:** GitHub Actions assumes AWS role via OIDC and runs `terraform plan` successfully.
+**Definition of done:** GitHub Actions assumes AWS role via OIDC and runs `terraform plan` successfully. ✓ COMPLETE
 
 ### Saturday (Deep Work — First Deployable Slice)
 
