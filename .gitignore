@@ -1,3 +1,19 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.auto.tfvars
+*.tfvars.local
+crash.log
+crash.*.log
+# .terraform.lock.hcl should be committed (provider version pinning)
+
+# AWS credentials / secrets — never commit these
+.env.local
+*.pem
+*.key
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

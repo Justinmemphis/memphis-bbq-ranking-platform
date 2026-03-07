@@ -1,0 +1,53 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write    # required for OIDC token exchange
+  contents: read
+  pull-requests: write  # to post plan output as a PR comment
+
+jobs:
+  plan-dev:
+    name: Plan (dev)
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+          # No static keys — OIDC trust is scoped to this repo and environment
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.5"
+
+      - name: Terraform Init
+        working-directory: infra/envs/dev
+        run: terraform init
+
+      - name: Terraform Format Check
+        working-directory: infra/envs/dev
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: infra/envs/dev
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: infra/envs/dev
+        run: terraform plan -no-color
+        # NOTE: terraform apply is NEVER run in CI.
+        # The repository owner runs apply manually after reviewing the plan.
