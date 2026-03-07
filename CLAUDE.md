@@ -8,8 +8,8 @@
 
 ## Git / GitHub
 
-- **Only the user commits and pushes.** Claude must never run `git push`, `git commit`, or any command that writes to the remote repository.
-- Claude may stage files (`git add`) and prepare commit messages for the user to review, but the user executes all commits manually.
+- Claude may run `git add` and `git commit`.
+- **Only the user runs `git push`.** Claude must never push to the remote repository.
 - The user manually reviews all GitHub pull requests and merges. Claude should not attempt to open, merge, or close PRs.
 
 ## How Claude Should Assist on This Project
