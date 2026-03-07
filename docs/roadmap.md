@@ -182,22 +182,30 @@ Observability:
 
 ## Week 1 Sprint Plan (Detailed)
 
-### Monday (Planning Day — today)
+### Monday (Planning Day — complete)
 
-- [ ] Finalize and document stack decisions (ADR)
-- [ ] Write product brief (`docs/01-product-brief.md`)
-- [ ] Sketch architecture diagram v1 (`docs/02-architecture.md`)
-- [ ] Write threat model v1 (`docs/03-threat-model.md`)
-- [ ] Create initial backlog in GitHub Projects (~15 tickets)
-- [ ] Set up repo directory structure
+- [x] Finalize and document stack decisions (ADR) — `docs/adr/0001-stack-choice.md`
+- [x] Set up repo directory structure — all scaffolding created and committed
+- [x] CLAUDE.md workflow rules, AI usage policy, SDLC principles
+- [x] `docs/roadmap.md` — 10-week phase plan with sprint detail
+- [x] `docs/04-cost-estimate.md` — per-phase AWS cost breakdown
+- [x] `app/lambdas/` stubs + `app/shared/auth.py` + `app/shared/models.py`
+- [x] `infra/modules/` stubs for all 5 modules
+- [x] `.github/workflows/terraform.yml` — PR plan workflow skeleton
+- [ ] Write product brief (`docs/01-product-brief.md`) — deferred
+- [ ] Sketch architecture diagram v1 (`docs/02-architecture.md`) — deferred
+- [ ] Write threat model v1 (`docs/03-threat-model.md`) — deferred
+- [ ] Create initial backlog in GitHub Projects (~15 tickets) — deferred
 
 ### Wednesday (Sprint 1 — Terraform Foundation)
 
-- [ ] Create Terraform project structure under `/infra`
-- [ ] Configure remote state: S3 bucket + DynamoDB lock table
-- [ ] Create AWS provider config (dev environment)
-- [ ] Deploy a trivial resource (S3 bucket) to verify `terraform plan` works
-- [ ] Confirm no manual console clicks required
+- [x] Create Terraform project structure under `/infra`
+- [x] Configure remote state: S3 bucket (`bbq-tfstate-justin`) + DynamoDB lock table (`bbq-tfstate-lock`) created manually in AWS
+- [x] Backend configured in `infra/envs/dev/backend.tf` and `infra/envs/prod/backend.tf`
+- [x] `terraform init` successful — backend connected, provider lock file committed
+- [x] `terraform validate` passing — configuration is valid
+- [ ] Deploy a first real resource to verify end-to-end (next step)
+- [ ] Confirm no manual console clicks required for subsequent deploys
 
 **Definition of done:** Infra deploys cleanly from code.
 

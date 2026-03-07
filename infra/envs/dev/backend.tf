@@ -6,10 +6,10 @@
 
 terraform {
   backend "s3" {
-    bucket         = "REPLACE-WITH-YOUR-TFSTATE-BUCKET"
+    bucket         = "bbq-tfstate-justin"
     key            = "dev/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "REPLACE-WITH-YOUR-TFSTATE-LOCK-TABLE"
+    dynamodb_table = "bbq-tfstate-lock"
     encrypt        = true
   }
 }
