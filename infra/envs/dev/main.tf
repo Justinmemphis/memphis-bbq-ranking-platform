@@ -20,10 +20,8 @@ provider "aws" {
   }
 }
 
-# Module calls will be added here as each module is implemented.
-# Example pattern:
-#   module "dynamodb" {
-#     source      = "../../modules/dynamodb"
-#     app_name    = var.app_name
-#     environment = var.environment
-#   }
+module "dynamodb" {
+  source      = "../../modules/dynamodb"
+  app_name    = var.app_name
+  environment = var.environment
+}

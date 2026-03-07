@@ -204,10 +204,10 @@ Observability:
 - [x] Backend configured in `infra/envs/dev/backend.tf` and `infra/envs/prod/backend.tf`
 - [x] `terraform init` successful — backend connected, provider lock file committed
 - [x] `terraform validate` passing — configuration is valid
-- [ ] Deploy a first real resource to verify end-to-end (next step)
-- [ ] Confirm no manual console clicks required for subsequent deploys
+- [x] Deploy first real resources: all 4 DynamoDB tables deployed to dev via `terraform apply`
+- [x] Confirm no manual console clicks required for subsequent deploys
 
-**Definition of done:** Infra deploys cleanly from code.
+**Definition of done:** Infra deploys cleanly from code. ✓ COMPLETE
 
 ### Friday (Sprint 2 — CI/CD + OIDC)
 
