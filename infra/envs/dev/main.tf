@@ -25,3 +25,4 @@ module "dynamodb" {
   app_name    = var.app_name
   environment = var.environment
 }
+# OIDC pipeline test
