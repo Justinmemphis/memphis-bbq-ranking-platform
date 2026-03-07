@@ -222,12 +222,57 @@ Observability:
 
 ### Saturday (Deep Work — First Deployable Slice)
 
-- [ ] Add S3 bucket for frontend + CloudFront distribution to Terraform
-- [ ] Wire pipeline: `plan` on PR, `apply` on merge (user runs apply)
-- [ ] Deploy minimal `index.html` to CloudFront
-- [ ] Stretch: add Lambda + API Gateway `/health` endpoint
+_Skipped — moved into Week 2 sprints._
 
-**Definition of done:** Push to main → infra updates → public URL is live.
+---
+
+## Week 2 Sprint Plan
+
+**Goal:** By end of Friday, have a live public URL (CloudFront), a working authenticated API endpoint, and a Cognito User Pool — the full "Hello, Production" skeleton from Phase 1.
+
+No Saturday this week.
+
+---
+
+### Monday (Sprint 3 — Static Site: S3 + CloudFront)
+
+**Goal:** First public URL deployed from code.
+
+- [ ] Implement `infra/modules/static_site/`: private S3 bucket + CloudFront distribution with Origin Access Control (OAC)
+- [ ] Wire module into `infra/envs/dev/main.tf`
+- [ ] Deploy minimal `index.html` ("Coming Soon") to S3
+- [ ] `terraform apply` — confirm CloudFront URL is live
+- [ ] Update GitHub Actions IAM policy to cover S3 + CloudFront resources
+
+**Definition of done:** A public CloudFront URL serves content deployed entirely from Terraform + code. No manual console steps.
+
+---
+
+### Wednesday (Sprint 4 — Lambda + API Gateway)
+
+**Goal:** First API endpoint live behind API Gateway.
+
+- [ ] Implement `infra/modules/lambda/`: Lambda function + IAM execution role + CloudWatch log group
+- [ ] Implement `infra/modules/api_http/`: API Gateway HTTP API + route + Lambda integration
+- [ ] Deploy `GET /v1/health` (unauthenticated for now — auth added Friday)
+- [ ] Verify endpoint responds via `curl` or browser
+- [ ] Update GitHub Actions IAM policy to cover Lambda + API Gateway resources
+
+**Definition of done:** `curl https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health` returns `{"status": "ok"}`.
+
+---
+
+### Friday (Sprint 5 — Cognito + Auth Wiring)
+
+**Goal:** All endpoints authenticated; full auth chain verified end-to-end.
+
+- [ ] Implement `infra/modules/cognito/`: User Pool + App Client (Hosted UI)
+- [ ] Wire JWT authorizer onto API Gateway
+- [ ] Update `health` Lambda to return caller's `sub` from JWT claims
+- [ ] Create a test user in Cognito dev pool; obtain a token; verify `GET /v1/health` returns `sub`
+- [ ] Update GitHub Actions IAM policy to cover Cognito resources
+
+**Definition of done:** `GET /v1/health` with a valid Cognito JWT returns `{"status": "ok", "sub": "<user-sub>"}`. Unauthenticated requests return 401.
 
 ---
 
