@@ -154,6 +154,7 @@ resource "aws_iam_role_policy" "github_actions" {
           "lambda:DeleteFunction",
           "lambda:GetFunction",
           "lambda:GetFunctionConfiguration",
+          "lambda:GetFunctionCodeSigningConfig",
           "lambda:UpdateFunctionCode",
           "lambda:UpdateFunctionConfiguration",
           "lambda:AddPermission",
