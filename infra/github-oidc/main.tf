@@ -76,10 +76,17 @@ resource "aws_iam_role" "github_actions" {
 
 # -------------------------------------------------------------------
 # IAM Policy — least privilege for current Terraform-managed resources
-# Covers: Terraform state (S3 + DynamoDB lock) + DynamoDB app tables
-# This policy will be extended as new modules are added.
+# Covers: Terraform state (S3 + DynamoDB lock), DynamoDB app tables,
+#         Lambda functions, API Gateway HTTP API, IAM execution roles,
+#         and CloudWatch Logs log groups.
+#
+# Sprint history:
+#   Sprint 2: S3 state + DynamoDB lock + DynamoDB app tables
+#   Sprint 4: Lambda + API Gateway + IAM exec roles + CloudWatch Logs
+#
 # Security note: permissions are scoped to specific resource ARNs
-# where possible — not wildcards.
+# where possible. API Gateway ARNs do not include the account ID
+# (AWS service quirk) so those statements use a regional wildcard.
 # -------------------------------------------------------------------
 resource "aws_iam_role_policy" "github_actions" {
   name = "bbq-github-actions-policy"
@@ -117,7 +124,6 @@ resource "aws_iam_role_policy" "github_actions" {
         Resource = "arn:aws:dynamodb:us-east-1:${data.aws_caller_identity.current.account_id}:table/bbq-tfstate-lock"
       },
       # --- DynamoDB app tables (bbq-dev-* and bbq-prod-*) ---
-      # Permissions required for terraform plan and apply on DynamoDB resources
       {
         Sid    = "DynamoDBAppTables"
         Effect = "Allow"
@@ -135,6 +141,102 @@ resource "aws_iam_role_policy" "github_actions" {
           "dynamodb:UpdateContinuousBackups",
         ]
         Resource = "arn:aws:dynamodb:us-east-1:${data.aws_caller_identity.current.account_id}:table/bbq-*"
+      },
+      # --- Lambda functions (bbq-dev-* and bbq-prod-*) ---
+      # CreateFunction/UpdateFunctionCode: deploy new code on apply.
+      # AddPermission/RemovePermission: manage API Gateway invoke permissions.
+      # GetFunction/GetPolicy needed by Terraform for drift detection on plan.
+      {
+        Sid    = "LambdaFunctions"
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:DeleteFunction",
+          "lambda:GetFunction",
+          "lambda:GetFunctionConfiguration",
+          "lambda:UpdateFunctionCode",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:AddPermission",
+          "lambda:RemovePermission",
+          "lambda:GetPolicy",
+          "lambda:ListVersionsByFunction",
+          "lambda:TagResource",
+          "lambda:UntagResource",
+          "lambda:ListTags",
+          "lambda:PublishVersion",
+        ]
+        Resource = "arn:aws:lambda:us-east-1:${data.aws_caller_identity.current.account_id}:function:bbq-*"
+      },
+      # --- IAM roles for Lambda execution (bbq-*-exec) ---
+      # Terraform creates a scoped execution role per Lambda function.
+      # PassRole is required when Lambda:CreateFunction references the role.
+      # Scoped to bbq-* prefix — prevents creating/modifying unrelated roles.
+      {
+        Sid    = "IAMExecRoles"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:GetRole",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:GetRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListInstanceProfilesForRole",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:PassRole",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/bbq-*"
+      },
+      # --- API Gateway HTTP API ---
+      # API Gateway ARNs do not include the account ID — this is an AWS quirk
+      # for the apigateway service. Scoped to us-east-1 only.
+      # Covers the API, stages, routes, and Lambda integrations.
+      {
+        Sid    = "APIGateway"
+        Effect = "Allow"
+        Action = [
+          "apigateway:GET",
+          "apigateway:POST",
+          "apigateway:PUT",
+          "apigateway:PATCH",
+          "apigateway:DELETE",
+          "apigateway:TagResource",
+          "apigateway:UntagResource",
+        ]
+        Resource = "arn:aws:apigateway:us-east-1::*"
+      },
+      # --- CloudWatch Logs: log groups for Lambda and API Gateway ---
+      # DescribeLogGroups uses * because the Describe API does not accept
+      # specific log group ARNs in IAM resource conditions (AWS limitation).
+      # Create/Delete/PutRetentionPolicy are scoped to bbq-prefixed groups.
+      {
+        Sid      = "CloudWatchLogsDescribe"
+        Effect   = "Allow"
+        Action   = ["logs:DescribeLogGroups"]
+        Resource = "*"
+      },
+      {
+        Sid    = "CloudWatchLogsManage"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DeleteLogGroup",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteRetentionPolicy",
+          "logs:ListTagsForResource",
+          "logs:ListTagsLogGroup",
+          "logs:TagLogGroup",
+          "logs:UntagLogGroup",
+          "logs:TagResource",
+          "logs:UntagResource",
+        ]
+        Resource = [
+          "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/bbq-*",
+          "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/apigateway/bbq-*",
+        ]
       },
     ]
   })
