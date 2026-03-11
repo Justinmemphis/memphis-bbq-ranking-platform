@@ -252,11 +252,11 @@ No Saturday this week.
 
 **Goal:** First API endpoint live behind API Gateway.
 
-- [ ] Implement `infra/modules/lambda/`: Lambda function + IAM execution role + CloudWatch log group
-- [ ] Implement `infra/modules/api_http/`: API Gateway HTTP API + route + Lambda integration
-- [ ] Deploy `GET /v1/health` (unauthenticated for now — auth added Friday)
-- [ ] Verify endpoint responds via `curl` or browser
-- [ ] Update GitHub Actions IAM policy to cover Lambda + API Gateway resources
+- [x] Implement `infra/modules/lambda/`: Lambda function + IAM execution role + CloudWatch log group
+- [x] Implement `infra/modules/api_http/`: API Gateway HTTP API + route + Lambda integration
+- [x] Deploy `GET /v1/health` (unauthenticated for now — auth added Friday)
+- [ ] Verify endpoint responds via `curl` or browser — pending `terraform apply`
+- [x] Update GitHub Actions IAM policy to cover Lambda + API Gateway resources
 
 **Definition of done:** `curl https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health` returns `{"status": "ok"}`.
 

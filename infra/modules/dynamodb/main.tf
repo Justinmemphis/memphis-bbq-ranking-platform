@@ -21,7 +21,7 @@ resource "aws_dynamodb_table" "ratings" {
   range_key    = "restaurant_id"
 
   attribute {
-    name = "user_id"     # Cognito sub — immutable identity key
+    name = "user_id" # Cognito sub — immutable identity key
     type = "S"
   }
 

@@ -1,5 +1,6 @@
 # Terraform
 .terraform/
+lambda-packages/
 *.tfstate
 *.tfstate.*
 *.tfplan
