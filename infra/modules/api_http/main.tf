@@ -94,14 +94,49 @@ resource "aws_apigatewayv2_integration" "lambda" {
   payload_format_version = "2.0"
 }
 
+# --- JWT Authorizer (optional) ---
+# Created only when var.jwt_authorizer is set. API Gateway validates the JWT
+# signature, expiry, issuer, and audience before invoking Lambda — no auth
+# logic needed in the Lambda functions themselves.
+#
+# Security:
+#   - issuer is scoped to our specific Cognito User Pool, not any Cognito pool.
+#   - audience is scoped to our specific App Client ID.
+#   - identity_sources: Authorization header only — standard Bearer token location.
+#   - A missing or invalid token returns 401 before Lambda is ever invoked.
+#
+# Alternatives considered:
+#   - Lambda authorizer: more flexible (custom claim logic, caching) but adds
+#     cold start latency and an extra Lambda to maintain. JWT authorizer is
+#     sufficient for Cognito's standard claim structure.
+#   - IAM auth: requires Signature V4 signing on every request — not suitable
+#     for a browser-based client without a signing proxy.
+resource "aws_apigatewayv2_authorizer" "jwt" {
+  count = var.jwt_authorizer != null ? 1 : 0
+
+  api_id           = aws_apigatewayv2_api.this.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-jwt"
+
+  jwt_configuration {
+    issuer   = var.jwt_authorizer.issuer
+    audience = var.jwt_authorizer.audience
+  }
+}
+
 # --- Routes (one per entry in var.routes) ---
 # route_key format: "METHOD /path" matches the map keys.
+# authorization_type = JWT wires the authorizer; NONE leaves routes open.
+# authorizer_id is null when jwt_authorizer is not set — Terraform omits the attribute.
 resource "aws_apigatewayv2_route" "this" {
   for_each = var.routes
 
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = each.key
-  target    = "integrations/${aws_apigatewayv2_integration.lambda[each.key].id}"
+  api_id             = aws_apigatewayv2_api.this.id
+  route_key          = each.key
+  target             = "integrations/${aws_apigatewayv2_integration.lambda[each.key].id}"
+  authorization_type = var.jwt_authorizer != null ? "JWT" : "NONE"
+  authorizer_id      = var.jwt_authorizer != null ? aws_apigatewayv2_authorizer.jwt[0].id : null
 }
 
 # --- Lambda invoke permissions ---

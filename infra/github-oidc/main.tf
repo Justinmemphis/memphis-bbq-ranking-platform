@@ -83,6 +83,7 @@ resource "aws_iam_role" "github_actions" {
 # Sprint history:
 #   Sprint 2: S3 state + DynamoDB lock + DynamoDB app tables
 #   Sprint 4: Lambda + API Gateway + IAM exec roles + CloudWatch Logs
+#   Sprint 5: Cognito User Pool + App Client + Hosted UI domain
 #
 # Security note: permissions are scoped to specific resource ARNs
 # where possible. API Gateway ARNs do not include the account ID
@@ -208,6 +209,46 @@ resource "aws_iam_role_policy" "github_actions" {
           "apigateway:UntagResource",
         ]
         Resource = "arn:aws:apigateway:us-east-1::*"
+      },
+      # --- Cognito User Pool management ---
+      # Split into two statements because CreateUserPool and ListUserPools do not
+      # support resource-level ARNs (AWS restriction) — they require "*".
+      # All other user pool operations are scoped to the userpool/* ARN pattern.
+      #
+      # Sprint 5: added to support terraform plan/apply for the cognito module.
+      # Security note: CreateUserPool is gated to us-east-1 only via the provider;
+      # the "*" resource is an AWS limitation, not a policy choice.
+      {
+        Sid    = "CognitoGlobal"
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:CreateUserPool",
+          "cognito-idp:ListUserPools",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "CognitoUserPool"
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:DeleteUserPool",
+          "cognito-idp:DescribeUserPool",
+          "cognito-idp:UpdateUserPool",
+          "cognito-idp:SetUserPoolMfaConfig",
+          "cognito-idp:GetUserPoolMfaConfig",
+          "cognito-idp:CreateUserPoolClient",
+          "cognito-idp:DeleteUserPoolClient",
+          "cognito-idp:UpdateUserPoolClient",
+          "cognito-idp:DescribeUserPoolClient",
+          "cognito-idp:ListUserPoolClients",
+          "cognito-idp:CreateUserPoolDomain",
+          "cognito-idp:DeleteUserPoolDomain",
+          "cognito-idp:DescribeUserPoolDomain",
+          "cognito-idp:TagResource",
+          "cognito-idp:UntagResource",
+          "cognito-idp:ListTagsForResource",
+        ]
+        Resource = "arn:aws:cognito-idp:us-east-1:${data.aws_caller_identity.current.account_id}:userpool/*"
       },
       # --- CloudWatch Logs: log groups for Lambda and API Gateway ---
       # DescribeLogGroups uses * because the Describe API does not accept

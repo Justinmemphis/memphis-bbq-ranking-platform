@@ -26,3 +26,19 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "jwt_authorizer" {
+  description = <<-EOT
+    Optional JWT authorizer configuration. When set, all routes require a valid JWT.
+    issuer:   the token issuer URL (e.g., Cognito User Pool endpoint).
+              API Gateway validates the 'iss' claim against this value.
+    audience: list of accepted audiences (e.g., [cognito_app_client_id]).
+              API Gateway validates the 'aud' claim against this list.
+    When null, routes are unauthenticated (used during initial scaffolding only).
+  EOT
+  type = object({
+    issuer   = string
+    audience = list(string)
+  })
+  default = null
+}

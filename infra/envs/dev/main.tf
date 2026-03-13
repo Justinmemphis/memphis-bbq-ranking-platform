@@ -26,6 +26,16 @@ module "dynamodb" {
   environment = var.environment
 }
 
+# --- Cognito User Pool ---
+# Each environment has its own isolated User Pool (dev and prod never share identity).
+# domain_prefix must be globally unique — set in terraform.tfvars.
+module "cognito" {
+  source        = "../../modules/cognito"
+  app_name      = var.app_name
+  environment   = var.environment
+  domain_prefix = var.cognito_domain_prefix
+}
+
 # --- Lambda: health ---
 # GET /v1/health — unauthenticated for this sprint.
 # Friday sprint (Sprint 5) adds the Cognito JWT authorizer and updates the
@@ -44,12 +54,18 @@ module "lambda_health" {
 }
 
 # --- API Gateway HTTP API ---
-# Routes map wires route keys to Lambda targets.
-# New routes added here as Lambda functions are implemented in Phase 2.
+# jwt_authorizer wires the Cognito User Pool as the token validator.
+# All routes require a valid Cognito JWT in the Authorization header.
+# New routes added to the routes map as Lambda functions are implemented in Phase 2.
 module "api" {
   source      = "../../modules/api_http"
   app_name    = var.app_name
   environment = var.environment
+
+  jwt_authorizer = {
+    issuer   = module.cognito.issuer_url
+    audience = [module.cognito.user_pool_client_id]
+  }
 
   routes = {
     "GET /v1/health" = {
@@ -62,4 +78,19 @@ module "api" {
 output "api_endpoint" {
   description = "Base URL for the dev API"
   value       = module.api.api_endpoint
+}
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID (for admin operations and CLI token issuance)"
+  value       = module.cognito.user_pool_id
+}
+
+output "cognito_client_id" {
+  description = "Cognito App Client ID (used as JWT audience)"
+  value       = module.cognito.user_pool_client_id
+}
+
+output "cognito_hosted_ui_url" {
+  description = "Cognito Hosted UI base URL"
+  value       = module.cognito.hosted_ui_base_url
 }
