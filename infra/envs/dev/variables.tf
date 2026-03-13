@@ -15,3 +15,11 @@ variable "region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "cognito_domain_prefix" {
+  description = <<-EOT
+    Cognito Hosted UI subdomain prefix (globally unique across all AWS accounts).
+    Change this in terraform.tfvars if the prefix is already taken.
+  EOT
+  type        = string
+}
