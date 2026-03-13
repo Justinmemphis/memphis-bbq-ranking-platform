@@ -57,16 +57,17 @@ The app is Memphis BBQ. The portfolio signal is production-grade cloud security 
 **Objective:** First end-to-end deployment, minimal features.
 
 **Deliverables:**
-- [ ] Terraform foundation: remote state (S3 + DynamoDB lock), environments (dev/prod), baseline networking
-- [ ] GitHub Actions pipeline: OIDC role assumption, `plan` on PR, `apply` on merge (user-triggered)
-- [ ] Frontend skeleton deployed: S3 + CloudFront, even just "Coming Soon"
-- [ ] Backend skeleton deployed: Lambda + API Gateway `/health` endpoint
-- [ ] Observability baseline: structured logs, basic CloudWatch dashboard
-
-- [ ] Auth chain verified end-to-end: `GET /v1/health` returns caller's `sub` (proves JWT authorizer → Lambda works)
-- [ ] Each environment has its own Cognito User Pool (dev/prod never share)
+- [x] Terraform foundation: remote state (S3 + DynamoDB lock), environments (dev/prod), baseline networking
+- [x] GitHub Actions pipeline: OIDC role assumption, `plan` on PR, `apply` on merge (user-triggered)
+- [ ] Frontend skeleton deployed: S3 + CloudFront, even just "Coming Soon" — deferred to Phase 2
+- [x] Backend skeleton deployed: Lambda + API Gateway `/health` endpoint
+- [ ] Observability baseline: structured logs done; CloudWatch dashboard deferred to Phase 4
+- [x] Auth chain verified end-to-end: `GET /v1/health` returns caller's `sub` (proves JWT authorizer → Lambda works)
+- [x] Each environment has its own Cognito User Pool (dev/prod never share)
 
 **Definition of done:** `git push` → pipeline → working public URL. No static AWS credentials anywhere. Auth chain verified via `/v1/health`.
+
+**Status:** Core auth skeleton complete. Frontend and dashboard deferred.
 
 ---
 
@@ -246,6 +247,8 @@ No Saturday this week.
 
 **Definition of done:** A public CloudFront URL serves content deployed entirely from Terraform + code. No manual console steps.
 
+_Skipped — deferred to Phase 2 to prioritize auth chain delivery._
+
 ---
 
 ### Wednesday (Sprint 4 — Lambda + API Gateway)
@@ -255,10 +258,10 @@ No Saturday this week.
 - [x] Implement `infra/modules/lambda/`: Lambda function + IAM execution role + CloudWatch log group
 - [x] Implement `infra/modules/api_http/`: API Gateway HTTP API + route + Lambda integration
 - [x] Deploy `GET /v1/health` (unauthenticated for now — auth added Friday)
-- [ ] Verify endpoint responds via `curl` or browser — pending `terraform apply`
+- [x] Verify endpoint responds via `curl` or browser
 - [x] Update GitHub Actions IAM policy to cover Lambda + API Gateway resources
 
-**Definition of done:** `curl https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health` returns `{"status": "ok"}`.
+**Definition of done:** `curl https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health` returns `{"status": "ok"}`. ✓ COMPLETE
 
 ---
 
@@ -266,13 +269,13 @@ No Saturday this week.
 
 **Goal:** All endpoints authenticated; full auth chain verified end-to-end.
 
-- [ ] Implement `infra/modules/cognito/`: User Pool + App Client (Hosted UI)
-- [ ] Wire JWT authorizer onto API Gateway
-- [ ] Update `health` Lambda to return caller's `sub` from JWT claims
-- [ ] Create a test user in Cognito dev pool; obtain a token; verify `GET /v1/health` returns `sub`
-- [ ] Update GitHub Actions IAM policy to cover Cognito resources
+- [x] Implement `infra/modules/cognito/`: User Pool + App Client (Hosted UI)
+- [x] Wire JWT authorizer onto API Gateway
+- [x] Update `health` Lambda to return caller's `sub` from JWT claims
+- [x] Create a test user in Cognito dev pool; obtain a token; verify `GET /v1/health` returns `sub`
+- [x] Update GitHub Actions IAM policy to cover Cognito resources
 
-**Definition of done:** `GET /v1/health` with a valid Cognito JWT returns `{"status": "ok", "sub": "<user-sub>"}`. Unauthenticated requests return 401.
+**Definition of done:** `GET /v1/health` with a valid Cognito JWT returns `{"status": "ok", "sub": "<user-sub>"}`. Unauthenticated requests return 401. ✓ COMPLETE
 
 ---
 
