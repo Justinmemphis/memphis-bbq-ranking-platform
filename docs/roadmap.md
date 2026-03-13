@@ -122,7 +122,9 @@ Auth + identity:
 - [ ] Cognito auth: user pools, roles/claims, least-privilege IAM per component
 - [ ] All endpoints authenticated; JWT validated server-side
 - [ ] `sub` used as stable user identity (not mutable email)
-- [ ] Admin user management: Lambda-backed `/v1/admin/` routes (Cognito group-gated) covering user create, delete, force password reset, and disable — no public UI needed, functional API only
+- [ ] Cognito `admin` group: assign group to admin users; all admin routes verify group membership server-side
+- [ ] Admin Lambda functions: list users, create user, disable/enable user, force password reset — exposed under `/v1/admin/` routes, 403 if caller is not in `admin` group
+- [ ] Admin UI: pure HTML + vanilla JS (no build step), deployed to S3 + CloudFront; redirects to Cognito Hosted UI for login, checks `cognito:groups` claim, calls admin Lambda routes — also delivers the deferred Sprint 3 static site work
 
 Abuse controls (user-submitted content):
 - [ ] Rate limiting on rating submissions: per-user and per-IP (WAF + Lambda-level)
