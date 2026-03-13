@@ -122,6 +122,7 @@ Auth + identity:
 - [ ] Cognito auth: user pools, roles/claims, least-privilege IAM per component
 - [ ] All endpoints authenticated; JWT validated server-side
 - [ ] `sub` used as stable user identity (not mutable email)
+- [ ] Admin user management: Lambda-backed `/v1/admin/` routes (Cognito group-gated) covering user create, delete, force password reset, and disable — no public UI needed, functional API only
 
 Abuse controls (user-submitted content):
 - [ ] Rate limiting on rating submissions: per-user and per-IP (WAF + Lambda-level)
@@ -161,6 +162,7 @@ Observability:
 - [ ] Chaos drill: intentionally misconfigure a permission or endpoint, document impact, detection, and remediation
 - [ ] Cost controls: AWS budgets, alerts, teardown runbook
 - [ ] Runbook doc: how to respond to a basic incident
+- [ ] User activity monitoring: CloudWatch dashboard surfacing login frequency, rating submission volume per user, and `rating_events` audit log queries — supports both ops visibility and abuse investigation
 
 **Definition of done:** You can tell the story of an incident and how you detected, responded, and fixed it.
 
