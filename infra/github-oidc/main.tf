@@ -224,6 +224,9 @@ resource "aws_iam_role_policy" "github_actions" {
         Action = [
           "cognito-idp:CreateUserPool",
           "cognito-idp:ListUserPools",
+          # DescribeUserPoolDomain requires resource: * — AWS does not support
+          # resource-level ARNs for this action (same limitation as ListUserPools).
+          "cognito-idp:DescribeUserPoolDomain",
         ]
         Resource = "*"
       },
