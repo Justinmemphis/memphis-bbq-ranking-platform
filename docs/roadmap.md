@@ -185,101 +185,72 @@ Observability:
 
 ---
 
-## Week 1 Sprint Plan (Detailed)
+## Week 3 Sprint Plan (2026-03-16 – 2026-03-22)
 
-### Monday (Planning Day — complete)
+**Phase:** Phase 2 — Core Product Features
 
-- [x] Finalize and document stack decisions (ADR) — `docs/adr/0001-stack-choice.md`
-- [x] Set up repo directory structure — all scaffolding created and committed
-- [x] CLAUDE.md workflow rules, AI usage policy, SDLC principles
-- [x] `docs/roadmap.md` — 10-week phase plan with sprint detail
-- [x] `docs/04-cost-estimate.md` — per-phase AWS cost breakdown
-- [x] `app/lambdas/` stubs + `app/shared/auth.py` + `app/shared/models.py`
-- [x] `infra/modules/` stubs for all 5 modules
-- [x] `.github/workflows/terraform.yml` — PR plan workflow skeleton
-- [ ] Write product brief (`docs/01-product-brief.md`) — deferred
-- [ ] Sketch architecture diagram v1 (`docs/02-architecture.md`) — deferred
-- [ ] Write threat model v1 (`docs/03-threat-model.md`) — deferred
-- [ ] Create initial backlog in GitHub Projects (~15 tickets) — deferred
+**Goal:** By end of Saturday, have real API endpoints live: list restaurants, get restaurant detail, and at minimum a stub leaderboard. DynamoDB tables are already deployed — this week wires in the Lambda functions and routes.
 
-### Wednesday (Sprint 1 — Terraform Foundation)
-
-- [x] Create Terraform project structure under `/infra`
-- [x] Configure remote state: S3 bucket (`bbq-tfstate-justin`) + DynamoDB lock table (`bbq-tfstate-lock`) created manually in AWS
-- [x] Backend configured in `infra/envs/dev/backend.tf` and `infra/envs/prod/backend.tf`
-- [x] `terraform init` successful — backend connected, provider lock file committed
-- [x] `terraform validate` passing — configuration is valid
-- [x] Deploy first real resources: all 4 DynamoDB tables deployed to dev via `terraform apply`
-- [x] Confirm no manual console clicks required for subsequent deploys
-
-**Definition of done:** Infra deploys cleanly from code. ✓ COMPLETE
-
-### Friday (Sprint 2 — CI/CD + OIDC)
-
-- [x] GitHub OIDC provider imported into Terraform state (pre-existed from another project)
-- [x] IAM role `bbq-github-actions` created — trust scoped to this repo only
-- [x] IAM policy: least privilege covering Terraform state (S3 + DynamoDB lock) and DynamoDB app tables
-- [x] `infra/github-oidc/` Terraform root committed with separate state key
-- [x] `AWS_OIDC_ROLE_ARN` secret added to GitHub Actions
-- [x] Pipeline triggered on PR — OIDC auth succeeded, `terraform plan` passed, no static credentials
-
-**Definition of done:** GitHub Actions assumes AWS role via OIDC and runs `terraform plan` successfully. ✓ COMPLETE
-
-### Saturday (Deep Work — First Deployable Slice)
-
-_Skipped — moved into Week 2 sprints._
+_Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.md)._
 
 ---
 
-## Week 2 Sprint Plan
+### Monday 2026-03-16 (Planning — short)
 
-**Goal:** By end of Friday, have a live public URL (CloudFront), a working authenticated API endpoint, and a Cognito User Pool — the full "Hello, Production" skeleton from Phase 1.
+**Goal:** Lock the week's scope; set up feature branch.
 
-No Saturday this week.
+- [ ] Review Phase 2 deliverables; pick the smallest vertical slice that's deployable by Saturday
+- [ ] Create feature branch for the week's work
+- [ ] Confirm DynamoDB table state in dev (spot-check via AWS console or `aws dynamodb list-tables`)
+- [ ] Decide on seed data strategy: script vs. manual console vs. Terraform locals
+- [ ] Identify any IAM permissions the new Lambda functions will need (DynamoDB read/write)
 
----
-
-### Monday (Sprint 3 — Static Site: S3 + CloudFront)
-
-**Goal:** First public URL deployed from code.
-
-- [ ] Implement `infra/modules/static_site/`: private S3 bucket + CloudFront distribution with Origin Access Control (OAC)
-- [ ] Wire module into `infra/envs/dev/main.tf`
-- [ ] Deploy minimal `index.html` ("Coming Soon") to S3
-- [ ] `terraform apply` — confirm CloudFront URL is live
-- [ ] Update GitHub Actions IAM policy to cover S3 + CloudFront resources
-
-**Definition of done:** A public CloudFront URL serves content deployed entirely from Terraform + code. No manual console steps.
-
-_Skipped — deferred to Phase 2 to prioritize auth chain delivery._
+**Definition of done:** Branch created, scope locked, no ambiguity about what ships this week.
 
 ---
 
-### Wednesday (Sprint 4 — Lambda + API Gateway)
+### Wednesday 2026-03-18 (Sprint 6 — `get_restaurants` + Route — short)
 
-**Goal:** First API endpoint live behind API Gateway.
+**Goal:** First data-backed endpoint live.
 
-- [x] Implement `infra/modules/lambda/`: Lambda function + IAM execution role + CloudWatch log group
-- [x] Implement `infra/modules/api_http/`: API Gateway HTTP API + route + Lambda integration
-- [x] Deploy `GET /v1/health` (unauthenticated for now — auth added Friday)
-- [x] Verify endpoint responds via `curl` or browser
-- [x] Update GitHub Actions IAM policy to cover Lambda + API Gateway resources
+- [ ] Implement `app/lambdas/get_restaurants/handler.py` — list all restaurants from DynamoDB; return JSON array
+- [ ] Add structured logging (level, message, requestId, userSub, route, statusCode, latencyMs)
+- [ ] Wire `GET /v1/restaurants` route in `infra/envs/dev/main.tf` with JWT authorizer
+- [ ] Update Lambda IAM role to allow `dynamodb:Scan` / `dynamodb:Query` on `restaurants` table
+- [ ] Seed 3–5 test restaurants into DynamoDB (script or console)
+- [ ] Smoke test: `curl` with valid JWT returns restaurant list
 
-**Definition of done:** `curl https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health` returns `{"status": "ok"}`. ✓ COMPLETE
+**Definition of done:** `GET /v1/restaurants` with a valid JWT returns a non-empty JSON array from real DynamoDB data.
 
 ---
 
-### Friday (Sprint 5 — Cognito + Auth Wiring)
+### Friday 2026-03-20 (Sprint 7 — `get_restaurant_detail` + Route — short)
 
-**Goal:** All endpoints authenticated; full auth chain verified end-to-end.
+**Goal:** Single restaurant lookup live; data model confirmed correct.
 
-- [x] Implement `infra/modules/cognito/`: User Pool + App Client (Hosted UI)
-- [x] Wire JWT authorizer onto API Gateway
-- [x] Update `health` Lambda to return caller's `sub` from JWT claims
-- [x] Create a test user in Cognito dev pool; obtain a token; verify `GET /v1/health` returns `sub`
-- [x] Update GitHub Actions IAM policy to cover Cognito resources
+- [ ] Implement `app/lambdas/get_restaurant_detail/handler.py` — fetch one restaurant by `restaurant_id`; return 404 if not found
+- [ ] Wire `GET /v1/restaurants/{id}` route with JWT authorizer
+- [ ] Add input validation: reject blank/invalid `restaurant_id`
+- [ ] Smoke test both endpoints end-to-end with valid JWT
+- [ ] Update GitHub Actions IAM policy if new resource types were added
 
-**Definition of done:** `GET /v1/health` with a valid Cognito JWT returns `{"status": "ok", "sub": "<user-sub>"}`. Unauthenticated requests return 401. ✓ COMPLETE
+**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404. Both restaurant endpoints pass a manual smoke test.
+
+---
+
+### Saturday 2026-03-22 (Sprint 8 — `get_leaderboard` + `submit_rating` — deep work)
+
+**Goal:** Core rating loop functional end-to-end.
+
+- [ ] Implement `app/lambdas/submit_rating/handler.py` — upsert rating in `ratings` table (PK: user sub, SK: restaurant_id); append event to `rating_events`; trigger leaderboard recompute inline
+- [ ] Implement leaderboard recompute: Bayesian average over all ratings for a restaurant; write result to `leaderboard_snapshot` with `version` field (timestamp)
+- [ ] Implement `app/lambdas/get_leaderboard/handler.py` — read from `leaderboard_snapshot` only (never scan `ratings`)
+- [ ] Wire `POST /v1/ratings` and `GET /v1/leaderboard` routes
+- [ ] Update Lambda IAM roles: `ratings` table read/write, `rating_events` write, `leaderboard_snapshot` read/write
+- [ ] Basic input validation: score must be integer 1–5; restaurant_id must exist
+- [ ] End-to-end smoke test: submit a rating → leaderboard updates → GET leaderboard reflects new score with `version` field
+
+**Definition of done:** A user can submit a rating and immediately see the leaderboard update. Leaderboard response includes `version`. Rating is idempotent (re-submit updates, doesn't duplicate). All four core endpoints live in dev.
 
 ---
 
