@@ -199,13 +199,17 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 **Goal:** Lock the week's scope; set up feature branch.
 
-- [ ] Review Phase 2 deliverables; pick the smallest vertical slice that's deployable by Saturday
-- [ ] Create feature branch for the week's work
-- [ ] Confirm DynamoDB table state in dev (spot-check via AWS console or `aws dynamodb list-tables`)
-- [ ] Decide on seed data strategy: script vs. manual console vs. Terraform locals
-- [ ] Identify any IAM permissions the new Lambda functions will need (DynamoDB read/write)
+- [x] Review Phase 2 deliverables; pick the smallest vertical slice that's deployable by Saturday
+- [x] Create feature branch for the week's work (`feature/week3-core-endpoints`)
+- [x] Confirm DynamoDB table state in dev — all 4 tables present, restaurants table empty
+- [x] Decide on seed data strategy — Python script (`scripts/seed_restaurants.py`); idempotent boto3 puts
+- [x] Identify IAM permissions needed — `additional_policy_json` variable added to Lambda module
+- [x] Add `__init__.py` package structure; switch all Lambdas to `source_path = app/` (Option A)
+- [x] Fix CI: `cognito-idp:DescribeUserPool` + `DescribeUserPoolDomain` added to OIDC role policy
+- [x] Smoke test `GET /v1/health` — confirmed working on new handler path
+- [x] Seed 5 Shelby County restaurants into `bbq-dev-restaurants`
 
-**Definition of done:** Branch created, scope locked, no ambiguity about what ships this week.
+**Definition of done:** Branch created, scope locked, no ambiguity about what ships this week. ✓ COMPLETE
 
 ---
 
