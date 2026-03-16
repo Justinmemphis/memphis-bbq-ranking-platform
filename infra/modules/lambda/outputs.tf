@@ -12,3 +12,8 @@ output "invoke_arn" {
   description = "ARN used by API Gateway to invoke this function (different from function ARN)"
   value       = aws_lambda_function.this.invoke_arn
 }
+
+output "role_name" {
+  description = "Name of the Lambda execution IAM role — use this to attach additional inline policies at the call site"
+  value       = aws_iam_role.lambda.name
+}

@@ -46,10 +46,13 @@ module "lambda_health" {
   app_name    = var.app_name
   environment = var.environment
 
-  function_name      = "health"
-  handler            = "handler.handler"
-  runtime            = "python3.12"
-  source_path        = "${path.root}/../../../app/lambdas/health"
+  function_name = "health"
+  runtime       = "python3.12"
+  # source_path is the app/ root — all Lambdas zip the full app tree so that
+  # app/shared/ is available to every function without a build step or symlinks.
+  # handler uses dot-notation to navigate the package hierarchy.
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.health.handler.handler"
   log_retention_days = 14
 }
 
