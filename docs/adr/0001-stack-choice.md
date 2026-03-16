@@ -32,7 +32,7 @@ Key requirements:
 
 **Lambda over EC2:** The author's existing portfolio already includes an EC2/Node/RDS project. Serverless provides a distinct story, lower operational overhead, and fits "thin CRUD + auth + leaderboard" access patterns well. The live leaderboard is deferred to a later phase; the architecture is designed to accommodate it without a rewrite (polling now, DynamoDB Streams + push later).
 
-**Python over Node:** Personal preference and familiarity. Lambda + Python is a common, well-supported combination.
+**Python over Node:** Developer preference and familiarity. Lambda + Python is a common, well-supported combination.
 
 **DynamoDB over RDS:** Leaderboard access patterns (fast ranked reads, keyed by user+restaurant) map naturally to DynamoDB. Eliminates connection management complexity under Lambda burst. `PAY_PER_REQUEST` billing is cost-effective for early traffic.
 

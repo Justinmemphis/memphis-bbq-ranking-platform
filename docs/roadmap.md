@@ -15,9 +15,9 @@ The goal of this project is not to build a BBQ app. The goal is to demonstrate p
 
 The app is Memphis BBQ. The portfolio signal is production-grade cloud security engineering.
 
-**Sanity check (run this before any design decision):** "If I swapped BBQ restaurants for Nashville coffee shops tomorrow, would the architecture still be impressive?" If yes, you're building it correctly.
+**Architecture sanity check:** "If the BBQ restaurants were swapped for Nashville coffee shops tomorrow, would the architecture still be impressive?" If yes, it's built correctly.
 
-**Branding note:** The app UI can use a consumer brand ("Best Memphis BBQ" or similar). The GitHub repo name (`memphis-bbq-ranking-platform`) signals a system, not a menu. README positioning: "Crowdsourced ranking platform with abuse controls and reproducible infrastructure."
+**Scope note:** The app UI uses a consumer brand ("Best Memphis BBQ" or similar). The GitHub repo name (`memphis-bbq-ranking-platform`) signals a system, not a menu. README positioning: "Crowdsourced ranking platform with abuse controls and reproducible infrastructure."
 
 ---
 
@@ -258,9 +258,9 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-## LinkedIn Posting Strategy
+## Portfolio Communication Strategy
 
-Post 3–5 high-quality posts over the life of the project, not daily updates. Each post should anchor to a specific technical concept (Terraform, OIDC, WAF, IAM, CI/CD) — not the BBQ theme.
+Post 3–5 high-quality technical write-ups over the life of the project, not daily updates. Each post should anchor to a specific technical concept (Terraform, OIDC, WAF, IAM, CI/CD) — not the BBQ theme.
 
 Good post topics:
 - "Designing a secure AWS deployment pipeline with GitHub OIDC (no static keys)"
@@ -273,39 +273,39 @@ Format: one clear technical insight + one architectural decision + one diagram o
 
 ---
 
-## AI Usage Policy (Claude Code)
+## AI-Assisted Development Approach
 
-**70% AI writes and refactors. 30% you verify and explain. If you can't explain a block in plain English, it doesn't ship.**
+**Approximately 70% of implementation is AI-accelerated; 30% is explicit developer verification and explanation. Nothing ships if the developer can't explain it in plain English.**
 
 ### What AI handles
 - Boilerplate and scaffolding (Terraform modules, GitHub Actions workflows, folder layout)
-- "Translate my intent into code" — you specify, AI implements
+- "Translate intent into code" — developer specifies, AI implements
 - Repetitive blocks: IAM policies, variable docs, security group rules
 - Tests, linters, pre-commit config, TF docs, OpenAPI docs
 - Option exploration: "Give me 3 approaches; compare cost/security/complexity"
 
-### What you own (non-negotiable)
+### Developer-owned decisions (non-negotiable)
 - All architecture and data model decisions
 - Security reasoning: why each IAM policy is least-privilege, how OIDC trust is scoped, threat model decisions
 - Verification of anything touching: IAM, networking, auth, data deletion, billing
-- The final "why" written in your own words for README, docs, LinkedIn
+- The final "why" written in the developer's own words for README, docs, and posts
 
 ### Per-task workflow
-1. You write a mini-spec (10 bullets max): inputs, outputs, constraints, definition of done
-2. Ask Claude to implement + annotate (why it exists, security implications, alternatives)
+1. Write a mini-spec (10 bullets max): inputs, outputs, constraints, definition of done
+2. Implement + annotate (why it exists, security implications, alternatives)
 3. Run verification checklist: `terraform fmt` + `validate` + `tflint` + plan reviewed line-by-line + IAM policy scope check + cost sanity check
-4. You rewrite the final explanation in your own words
+4. Rewrite the final explanation in plain language
 
-### Defense cards (interview-proofing)
-For every major chunk, capture in notes/README:
+### Decision documentation (per major component)
+For every significant chunk, capture in notes/README:
 - What it does
 - Why it's designed this way
 - Main risk
-- How you mitigated it
-- What you'd improve with more time
+- How it's mitigated
+- What would improve with more time
 
-### How to frame it
-> "I used AI tooling to accelerate implementation, but I owned architecture, security decisions, and validation — plans, tests, policy scope, CI/CD controls."
+### Framing
+> "AI tooling accelerated implementation, but architecture, security decisions, and validation were developer-owned — plans, tests, policy scope, CI/CD controls."
 
 ---
 
