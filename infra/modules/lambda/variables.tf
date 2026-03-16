@@ -41,3 +41,20 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "additional_policy_json" {
+  description = <<-EOT
+    Optional JSON IAM policy document to attach to the Lambda execution role as an
+    inline policy. Use this to grant per-function permissions (e.g. DynamoDB access)
+    without embedding them in the module itself — keeps the module generic and
+    each function's permissions explicit at the call site.
+
+    Must be a valid IAM policy JSON string (use jsonencode() in the caller).
+    Leave empty (default) when no additional permissions are needed.
+
+    Security note: follow least privilege — scope each statement to the specific
+    table ARN and action set the function actually needs.
+  EOT
+  type        = string
+  default     = ""
+}

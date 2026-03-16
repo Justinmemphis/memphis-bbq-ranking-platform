@@ -84,6 +84,18 @@ resource "aws_iam_role_policy" "lambda_logs" {
   })
 }
 
+# --- IAM policy: additional (optional, caller-supplied) ---
+# Attached when additional_policy_json is non-empty. Grants per-function
+# permissions (e.g. DynamoDB read/write) scoped at the call site.
+# An empty string means no resource is created — avoids a Terraform error
+# from registering an invalid policy document.
+resource "aws_iam_role_policy" "additional" {
+  count  = var.additional_policy_json != "" ? 1 : 0
+  name   = "${local.full_name}-additional"
+  role   = aws_iam_role.lambda.id
+  policy = var.additional_policy_json
+}
+
 # --- Lambda function ---
 # depends_on log group: ensures the log group (with retention) exists before
 # the function is created, preventing the auto-creation race condition.
