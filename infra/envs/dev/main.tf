@@ -56,6 +56,40 @@ module "lambda_health" {
   log_retention_days = 14
 }
 
+# --- Lambda: get_restaurants ---
+# GET /v1/restaurants — returns all restaurants from DynamoDB.
+# IAM: Scan-only on the restaurants table (no writes, no access to other tables).
+# Table name is injected via environment variable — same code runs in dev and prod.
+module "lambda_get_restaurants" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "get-restaurants"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.get_restaurants.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    RESTAURANTS_TABLE = module.dynamodb.restaurants_table_name
+  }
+
+  # Least-privilege: only Scan on the restaurants table.
+  # Scan is used (vs Query) because there's no GSI to filter by — all restaurants
+  # are returned. If a search/filter feature is added, a GSI + Query replaces this.
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ScanRestaurants"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Scan"]
+        Resource = module.dynamodb.restaurants_table_arn
+      },
+    ]
+  })
+}
+
 # --- API Gateway HTTP API ---
 # jwt_authorizer wires the Cognito User Pool as the token validator.
 # All routes require a valid Cognito JWT in the Authorization header.
@@ -74,6 +108,10 @@ module "api" {
     "GET /v1/health" = {
       invoke_arn    = module.lambda_health.invoke_arn
       function_name = module.lambda_health.function_name
+    }
+    "GET /v1/restaurants" = {
+      invoke_arn    = module.lambda_get_restaurants.invoke_arn
+      function_name = module.lambda_get_restaurants.function_name
     }
   }
 }
