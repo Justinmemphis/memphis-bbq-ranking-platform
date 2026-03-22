@@ -187,74 +187,80 @@ Observability:
 
 ## Week 3 Sprint Plan (2026-03-16 – 2026-03-22)
 
-**Phase:** Phase 2 — Core Product Features
-
-**Goal:** By end of Saturday, have real API endpoints live: list restaurants, get restaurant detail, and at minimum a stub leaderboard. DynamoDB tables are already deployed — this week wires in the Lambda functions and routes.
-
 _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.md)._
 
----
-
-### Monday 2026-03-16 (Planning — short)
-
-**Goal:** Lock the week's scope; set up feature branch.
-
-- [x] Review Phase 2 deliverables; pick the smallest vertical slice that's deployable by Saturday
-- [x] Create feature branch for the week's work (`feature/week3-core-endpoints`)
-- [x] Confirm DynamoDB table state in dev — all 4 tables present, restaurants table empty
-- [x] Decide on seed data strategy — Python script (`scripts/seed_restaurants.py`); idempotent boto3 puts
-- [x] Identify IAM permissions needed — `additional_policy_json` variable added to Lambda module
-- [x] Add `__init__.py` package structure; switch all Lambdas to `source_path = app/` (Option A)
-- [x] Fix CI: `cognito-idp:DescribeUserPool` + `DescribeUserPoolDomain` added to OIDC role policy
-- [x] Smoke test `GET /v1/health` — confirmed working on new handler path
-- [x] Seed 5 Shelby County restaurants into `bbq-dev-restaurants`
-
-**Definition of done:** Branch created, scope locked, no ambiguity about what ships this week. ✓ COMPLETE
+- Monday: Planning complete ✓
+- Sunday 2026-03-22: Sprint 6 — `GET /v1/restaurants` live ✓
 
 ---
 
-### Wednesday 2026-03-18 (Sprint 6 — `get_restaurants` + Route — short)
+## Week 4 Sprint Plan (2026-03-23 – 2026-03-29)
 
-**Goal:** First data-backed endpoint live.
+**Phase:** Phase 2 — Core Product Features (continued)
 
-- [ ] Implement `app/lambdas/get_restaurants/handler.py` — list all restaurants from DynamoDB; return JSON array
-- [ ] Add structured logging (level, message, requestId, userSub, route, statusCode, latencyMs)
-- [ ] Wire `GET /v1/restaurants` route in `infra/envs/dev/main.tf` with JWT authorizer
-- [ ] Update Lambda IAM role to allow `dynamodb:Scan` / `dynamodb:Query` on `restaurants` table
-- [ ] Seed 3–5 test restaurants into DynamoDB (script or console)
-- [ ] Smoke test: `curl` with valid JWT returns restaurant list
-
-**Definition of done:** `GET /v1/restaurants` with a valid JWT returns a non-empty JSON array from real DynamoDB data.
+**Goal:** Close out Phase 2. By end of Saturday, all four core endpoints are live, the rating loop is functional, and the leaderboard updates on submit.
 
 ---
 
-### Friday 2026-03-20 (Sprint 7 — `get_restaurant_detail` + Route — short)
+### Monday 2026-03-23 (Sprint 7 — `get_restaurant_detail` — short)
 
-**Goal:** Single restaurant lookup live; data model confirmed correct.
+**Goal:** Single restaurant lookup live; 404 handling confirmed.
 
 - [ ] Implement `app/lambdas/get_restaurant_detail/handler.py` — fetch one restaurant by `restaurant_id`; return 404 if not found
-- [ ] Wire `GET /v1/restaurants/{id}` route with JWT authorizer
-- [ ] Add input validation: reject blank/invalid `restaurant_id`
-- [ ] Smoke test both endpoints end-to-end with valid JWT
-- [ ] Update GitHub Actions IAM policy if new resource types were added
+- [ ] Input validation: reject blank/missing `restaurant_id`
+- [ ] Wire `GET /v1/restaurants/{id}` route in Terraform with JWT authorizer
+- [ ] Lambda IAM: `dynamodb:GetItem` on `restaurants` table ARN
+- [ ] Smoke test: valid ID returns restaurant, unknown ID returns clean 404
 
-**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404. Both restaurant endpoints pass a manual smoke test.
+**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404.
 
 ---
 
-### Saturday 2026-03-22 (Sprint 8 — `get_leaderboard` + `submit_rating` — deep work)
+### Wednesday 2026-03-25 (Sprint 8 — `get_leaderboard` — short)
 
-**Goal:** Core rating loop functional end-to-end.
+**Goal:** Leaderboard read endpoint live; design constraints locked in from day one.
 
-- [ ] Implement `app/lambdas/submit_rating/handler.py` — upsert rating in `ratings` table (PK: user sub, SK: restaurant_id); append event to `rating_events`; trigger leaderboard recompute inline
-- [ ] Implement leaderboard recompute: Bayesian average over all ratings for a restaurant; write result to `leaderboard_snapshot` with `version` field (timestamp)
 - [ ] Implement `app/lambdas/get_leaderboard/handler.py` — read from `leaderboard_snapshot` only (never scan `ratings`)
-- [ ] Wire `POST /v1/ratings` and `GET /v1/leaderboard` routes
-- [ ] Update Lambda IAM roles: `ratings` table read/write, `rating_events` write, `leaderboard_snapshot` read/write
-- [ ] Basic input validation: score must be integer 1–5; restaurant_id must exist
-- [ ] End-to-end smoke test: submit a rating → leaderboard updates → GET leaderboard reflects new score with `version` field
+- [ ] Response includes `version` field (timestamp) — supports future polling/push upgrades
+- [ ] Wire `GET /v1/leaderboard` route in Terraform with JWT authorizer
+- [ ] Lambda IAM: `dynamodb:Query` on `leaderboard_snapshot` table ARN
+- [ ] Smoke test: endpoint returns empty leaderboard (no ratings yet) with `version` field present
 
-**Definition of done:** A user can submit a rating and immediately see the leaderboard update. Leaderboard response includes `version`. Rating is idempotent (re-submit updates, doesn't duplicate). All four core endpoints live in dev.
+**Definition of done:** `GET /v1/leaderboard` returns `{"leaderboard": [], "version": "<timestamp>"}` or populated data. Never touches the `ratings` table directly.
+
+---
+
+### Friday 2026-03-27 (Sprint 9 — `submit_rating` write path — short)
+
+**Goal:** Rating write path live; DynamoDB state confirmed correct before wiring leaderboard.
+
+- [ ] Implement `app/lambdas/submit_rating/handler.py` — upsert rating in `ratings` table (PK: user sub, SK: restaurant_id); append event to `rating_events`
+- [ ] Input validation: score must be integer 1–5; `restaurant_id` must be non-empty
+- [ ] Wire `POST /v1/ratings` route in Terraform with JWT authorizer
+- [ ] Lambda IAM: `dynamodb:PutItem` + `dynamodb:UpdateItem` on `ratings`; `dynamodb:PutItem` on `rating_events`
+- [ ] Smoke test: POST a rating, verify item in DynamoDB directly; re-submit updates (does not duplicate)
+- [ ] Leaderboard recompute is a stub/pass for now — wired Saturday
+
+**Definition of done:** `POST /v1/ratings` upserts a rating and appends an audit event. Rating is idempotent. Leaderboard not yet updated.
+
+---
+
+### Saturday 2026-03-29 (Sprint 10 — Bayesian recompute + end-to-end — deep work)
+
+**Goal:** Full rating loop functional. Phase 2 complete.
+
+- [ ] Implement leaderboard recompute: Bayesian average over all ratings for each restaurant; write ranked results to `leaderboard_snapshot` with `version` (timestamp) and `algorithm_version` attribute
+- [ ] Wire recompute as inline call from `submit_rating` (DynamoDB Streams upgrade path deferred to Phase 4)
+- [ ] Add `dynamodb:Scan` on `ratings` + `dynamodb:PutItem` on `leaderboard_snapshot` to `submit_rating` IAM role
+- [ ] Add restaurant existence check to `submit_rating`: `GetItem` on `restaurants` before accepting a rating; return 404 if not found
+- [ ] End-to-end smoke test: submit a rating → `GET /v1/leaderboard` reflects updated score with new `version`
+- [ ] Verify all Phase 2 leaderboard design constraints:
+  - [ ] Leaderboard reads never scan `ratings`
+  - [ ] Response includes `version` field
+  - [ ] `algorithm_version` stored as attribute on leaderboard items
+  - [ ] Restaurant IDs are stable slugs throughout
+
+**Definition of done:** A user can submit a rating and immediately see the leaderboard update. Leaderboard response includes `version`. Rating is idempotent. All four core endpoints live in dev. Phase 2 complete.
 
 ---
 
