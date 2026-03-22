@@ -5,6 +5,8 @@ A full-stack, secure, cloud-native app built as a DevSecOps portfolio project.
 
 _The BBQ is a Trojan horse. The real demo is the infrastructure, security posture, and CI/CD pipeline._
 
+> **Status:** Currently in Phase 2 — core API endpoints. Phase 3 adds WAF, abuse controls, and security hardening.
+
 ---
 
 ## Portfolio Highlights

@@ -43,6 +43,7 @@ This project follows modern SDLC practices as a deliberate career-development ex
 - All work happens on feature branches (e.g., `feature/terraform-foundation`, `fix/auth-claims`)
 - No direct commits to `main` — all changes go through a PR
 - CI must pass before a PR can be merged
+- **Exception:** doc-only changes (no code, no `infra/` files) may be committed directly to `main`
 
 **Definition of done (per feature/task):**
 - Code deployed to dev environment
