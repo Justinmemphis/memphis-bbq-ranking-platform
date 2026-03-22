@@ -97,3 +97,37 @@ _Skipped — deferred to Phase 2/3 to prioritize auth chain delivery._
 - [x] Update GitHub Actions IAM policy to cover Cognito resources
 
 **Definition of done:** `GET /v1/health` with a valid Cognito JWT returns `{"status": "ok", "sub": "<user-sub>"}`. Unauthenticated requests return 401. ✓ COMPLETE
+
+---
+
+## Week 3 (2026-03-16 – 2026-03-22)
+
+**Phase:** Phase 2 — Core Product Features
+
+---
+
+### Monday 2026-03-16 (Planning)
+
+- [x] Review Phase 2 deliverables; locked week's scope
+- [x] Created feature branch `feature/week3-core-endpoints`
+- [x] Confirmed all 4 DynamoDB tables present in dev; restaurants table empty
+- [x] Decided seed data strategy — `scripts/seed_restaurants.py`; idempotent boto3 puts
+- [x] Added `additional_policy_json` variable to Lambda module for per-function IAM
+- [x] Switched all Lambdas to `source_path = app/` (full app tree zip, shared/ available everywhere)
+- [x] Fixed CI: `cognito-idp:DescribeUserPool` + `DescribeUserPoolDomain` added to OIDC role policy
+- [x] Smoke tested `GET /v1/health` on new handler path — confirmed working
+- [x] Seeded 5 Shelby County restaurants into `bbq-dev-restaurants`
+
+---
+
+### Sunday 2026-03-22 (Sprint 6 — `get_restaurants`)
+
+_Wednesday and Friday sprints were not completed this week; Sprint 6 delivered on Sunday._
+
+- [x] Implemented `app/lambdas/get_restaurants/handler.py` — DynamoDB Scan with pagination, structured JSON logging
+- [x] Wired `GET /v1/restaurants` route in `infra/envs/dev/main.tf` with JWT authorizer
+- [x] Lambda IAM: `dynamodb:Scan` on `bbq-dev-restaurants` ARN only
+- [x] Injected `RESTAURANTS_TABLE` env var — same code works in dev and prod
+- [x] Smoke tested: valid JWT returns JSON array of seeded restaurants
+
+**Definition of done:** `GET /v1/restaurants` with a valid JWT returns a non-empty JSON array from real DynamoDB data. ✓ COMPLETE
