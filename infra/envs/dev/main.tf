@@ -90,6 +90,49 @@ module "lambda_get_restaurants" {
   })
 }
 
+# --- Lambda: submit_rating ---
+# POST /v1/ratings — upserts the caller's rating; appends an audit event.
+# IAM: PutItem on ratings (upsert) and rating_events (audit append).
+# UpdateItem is not needed — PutItem is the upsert mechanism for this table design.
+# Leaderboard recompute (Sprint 10) will add Scan on ratings + PutItem on
+# leaderboard_snapshot to this role at that time.
+module "lambda_submit_rating" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "submit-rating"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.submit_rating.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    RATINGS_TABLE       = module.dynamodb.ratings_table_name
+    RATING_EVENTS_TABLE = module.dynamodb.rating_events_table_name
+  }
+
+  # Least-privilege: write to ratings (upsert) and rating_events (audit append) only.
+  # Reads on ratings are not granted here — the Lambda never reads back what it wrote.
+  # Security: no cross-table read access; leaderboard table is not accessible.
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "UpsertRating"
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem"]
+        Resource = module.dynamodb.ratings_table_arn
+      },
+      {
+        Sid      = "AppendRatingEvent"
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem"]
+        Resource = module.dynamodb.rating_events_table_arn
+      },
+    ]
+  })
+}
+
 # --- API Gateway HTTP API ---
 # jwt_authorizer wires the Cognito User Pool as the token validator.
 # All routes require a valid Cognito JWT in the Authorization header.
@@ -112,6 +155,10 @@ module "api" {
     "GET /v1/restaurants" = {
       invoke_arn    = module.lambda_get_restaurants.invoke_arn
       function_name = module.lambda_get_restaurants.function_name
+    }
+    "POST /v1/ratings" = {
+      invoke_arn    = module.lambda_submit_rating.invoke_arn
+      function_name = module.lambda_submit_rating.function_name
     }
   }
 }
