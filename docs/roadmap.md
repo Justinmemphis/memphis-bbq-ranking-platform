@@ -234,12 +234,12 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 **Goal:** Rating write path live; DynamoDB state confirmed correct before wiring leaderboard.
 
-- [ ] Implement `app/lambdas/submit_rating/handler.py` — upsert rating in `ratings` table (PK: user sub, SK: restaurant_id); append event to `rating_events`
-- [ ] Input validation: score must be integer 1–5; `restaurant_id` must be non-empty
-- [ ] Wire `POST /v1/ratings` route in Terraform with JWT authorizer
-- [ ] Lambda IAM: `dynamodb:PutItem` + `dynamodb:UpdateItem` on `ratings`; `dynamodb:PutItem` on `rating_events`
-- [ ] Smoke test: POST a rating, verify item in DynamoDB directly; re-submit updates (does not duplicate)
-- [ ] Leaderboard recompute is a stub/pass for now — wired Saturday
+- [x] Implement `app/lambdas/submit_rating/handler.py` — upsert rating in `ratings` table (PK: user sub, SK: restaurant_id); append event to `rating_events`
+- [x] Input validation: score must be integer 1–5; `restaurant_id` must be non-empty
+- [x] Wire `POST /v1/ratings` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:PutItem` on `ratings`; `dynamodb:PutItem` on `rating_events`
+- [ ] Smoke test: POST a rating, verify item in DynamoDB directly; re-submit updates (does not duplicate) — **TODO: carry into Saturday**
+- [x] Leaderboard recompute is a stub/pass for now — wired Saturday
 
 **Definition of done:** `POST /v1/ratings` upserts a rating and appends an audit event. Rating is idempotent. Leaderboard not yet updated.
 
