@@ -91,11 +91,15 @@ module "lambda_get_restaurants" {
 }
 
 # --- Lambda: submit_rating ---
-# POST /v1/ratings — upserts the caller's rating; appends an audit event.
-# IAM: PutItem on ratings (upsert) and rating_events (audit append).
-# UpdateItem is not needed — PutItem is the upsert mechanism for this table design.
-# Leaderboard recompute (Sprint 10) will add Scan on ratings + PutItem on
-# leaderboard_snapshot to this role at that time.
+# POST /v1/ratings — upserts the caller's rating; appends an audit event;
+# recomputes the leaderboard inline (Bayesian average).
+# IAM grants are scoped to the minimum needed for all three operations:
+#   - restaurants: GetItem only (existence check, no write access)
+#   - ratings: PutItem (upsert) + Scan (recompute needs all rows)
+#   - rating_events: PutItem (audit append)
+#   - leaderboard_snapshot: Query + DeleteItem + PutItem (replace stale snapshot)
+# Scan on ratings is the inline recompute cost; the DynamoDB Streams upgrade
+# eliminates this scan by triggering the aggregator on each write event.
 module "lambda_submit_rating" {
   source      = "../../modules/lambda"
   app_name    = var.app_name
@@ -107,27 +111,118 @@ module "lambda_submit_rating" {
   log_retention_days = 14
 
   environment_vars = {
-    RATINGS_TABLE       = module.dynamodb.ratings_table_name
-    RATING_EVENTS_TABLE = module.dynamodb.rating_events_table_name
+    RESTAURANTS_TABLE          = module.dynamodb.restaurants_table_name
+    RATINGS_TABLE              = module.dynamodb.ratings_table_name
+    RATING_EVENTS_TABLE        = module.dynamodb.rating_events_table_name
+    LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
   }
 
-  # Least-privilege: write to ratings (upsert) and rating_events (audit append) only.
-  # Reads on ratings are not granted here — the Lambda never reads back what it wrote.
-  # Security: no cross-table read access; leaderboard table is not accessible.
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        # Read-only existence check — no write access to the restaurants table.
+        Sid      = "CheckRestaurantExists"
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem"]
+        Resource = module.dynamodb.restaurants_table_arn
+      },
+      {
+        # Upsert the user's rating (PutItem = create or overwrite).
         Sid      = "UpsertRating"
         Effect   = "Allow"
         Action   = ["dynamodb:PutItem"]
         Resource = module.dynamodb.ratings_table_arn
       },
       {
+        # Full scan needed for inline Bayesian recompute across all restaurants.
+        # Scan scope is limited to this table only — no cross-table access.
+        Sid      = "ScanRatingsForRecompute"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Scan"]
+        Resource = module.dynamodb.ratings_table_arn
+      },
+      {
+        # Audit log — append-only, never read or delete from this function.
         Sid      = "AppendRatingEvent"
         Effect   = "Allow"
         Action   = ["dynamodb:PutItem"]
         Resource = module.dynamodb.rating_events_table_arn
+      },
+      {
+        # Leaderboard recompute: query existing ranks, delete stale items,
+        # write fresh snapshot. All three actions are required for a clean replace.
+        Sid    = "RewriteLeaderboardSnapshot"
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Query",
+          "dynamodb:DeleteItem",
+          "dynamodb:PutItem",
+          "dynamodb:BatchWriteItem",
+        ]
+        Resource = module.dynamodb.leaderboard_snapshot_table_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: get_leaderboard ---
+# GET /v1/leaderboard — reads from leaderboard_snapshot; never touches ratings.
+# IAM: Query only on the leaderboard_snapshot table.
+# Query (not Scan) is used because scope is the partition key — efficient even
+# at large item counts within a scope.
+module "lambda_get_leaderboard" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "get-leaderboard"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.get_leaderboard.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
+  }
+
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "QueryLeaderboard"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query"]
+        Resource = module.dynamodb.leaderboard_snapshot_table_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: get_restaurant_detail ---
+# GET /v1/restaurants/{restaurant_id} — single restaurant lookup by slug ID.
+# IAM: GetItem only on the restaurants table (no scan, no write access).
+module "lambda_get_restaurant_detail" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "get-restaurant-detail"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.get_restaurant_detail.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    RESTAURANTS_TABLE = module.dynamodb.restaurants_table_name
+  }
+
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "GetRestaurantDetail"
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem"]
+        Resource = module.dynamodb.restaurants_table_arn
       },
     ]
   })
@@ -155,6 +250,14 @@ module "api" {
     "GET /v1/restaurants" = {
       invoke_arn    = module.lambda_get_restaurants.invoke_arn
       function_name = module.lambda_get_restaurants.function_name
+    }
+    "GET /v1/restaurants/{restaurant_id}" = {
+      invoke_arn    = module.lambda_get_restaurant_detail.invoke_arn
+      function_name = module.lambda_get_restaurant_detail.function_name
+    }
+    "GET /v1/leaderboard" = {
+      invoke_arn    = module.lambda_get_leaderboard.invoke_arn
+      function_name = module.lambda_get_leaderboard.function_name
     }
     "POST /v1/ratings" = {
       invoke_arn    = module.lambda_submit_rating.invoke_arn

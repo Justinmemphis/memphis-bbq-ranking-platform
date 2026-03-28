@@ -69,6 +69,13 @@ This project follows modern SDLC practices as a deliberate career-development ex
 - Every PR delivers something observable — a working endpoint, a deployed resource, a passing test
 - No "big bang" PRs that touch everything at once
 
+## Command Formatting
+
+When presenting shell commands to the user:
+- **Always use true single-line commands** — no backslash continuations, no heredocs, no wrapping.
+- For multi-step sequences that share variables (e.g. TOKEN), present each step as a separate single-line command. Variables persist in the zsh session between pastes.
+- For genuinely complex scripts (more than ~3 steps), write a `.sh` file using the Write tool and tell the user to run `bash <filename>`. Do not inline complex scripts as shell commands.
+
 ## General Workflow Reminders
 
 - Follow modern DevSecOps principles: Infrastructure as Code, least privilege, no long-lived secrets, security as a first-class concern.

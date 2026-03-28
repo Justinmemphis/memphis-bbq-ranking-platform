@@ -148,7 +148,8 @@ resource "aws_lambda_permission" "apigw" {
 
   # statement_id must be alphanumeric, underscores, or dashes.
   # Route key format "GET /v1/health" has spaces and slashes — strip both.
-  statement_id  = "AllowAPIGW-${replace(replace(each.key, " ", "-"), "/", "-")}"
+  # Path parameters like {restaurant_id} add curly braces — strip those too.
+  statement_id  = "AllowAPIGW-${replace(replace(replace(replace(each.key, " ", "-"), "/", "-"), "{", ""), "}", "")}"
   action        = "lambda:InvokeFunction"
   function_name = each.value.function_name
   principal     = "apigateway.amazonaws.com"
