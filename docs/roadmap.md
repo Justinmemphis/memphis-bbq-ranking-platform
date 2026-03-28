@@ -108,6 +108,8 @@ Leaderboard reads always hit `leaderboard_snapshot` (never scan `ratings` on hot
 
 **Definition of done:** A user can browse restaurants, submit a rating, and see the ranked leaderboard update. An admin can maintain restaurant data. All leaderboard design constraints checked off.
 
+**Status:** Complete 2026-03-28. All four endpoints live in dev, end-to-end smoke tested. Admin path deferred to Phase 3.
+
 ---
 
 ### Phase 3 — Weeks 6–7: Security Hardening
@@ -206,13 +208,13 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 **Goal:** Single restaurant lookup live; 404 handling confirmed.
 
-- [ ] Implement `app/lambdas/get_restaurant_detail/handler.py` — fetch one restaurant by `restaurant_id`; return 404 if not found
-- [ ] Input validation: reject blank/missing `restaurant_id`
-- [ ] Wire `GET /v1/restaurants/{id}` route in Terraform with JWT authorizer
-- [ ] Lambda IAM: `dynamodb:GetItem` on `restaurants` table ARN
-- [ ] Smoke test: valid ID returns restaurant, unknown ID returns clean 404
+- [x] Implement `app/lambdas/get_restaurant_detail/handler.py` — fetch one restaurant by `restaurant_id`; return 404 if not found
+- [x] Input validation: reject blank/missing `restaurant_id`
+- [x] Wire `GET /v1/restaurants/{id}` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:GetItem` on `restaurants` table ARN
+- [x] Smoke test: valid ID returns restaurant, unknown ID returns clean 404
 
-**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404.
+**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404. ✓
 
 ---
 
@@ -220,13 +222,13 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 **Goal:** Leaderboard read endpoint live; design constraints locked in from day one.
 
-- [ ] Implement `app/lambdas/get_leaderboard/handler.py` — read from `leaderboard_snapshot` only (never scan `ratings`)
-- [ ] Response includes `version` field (timestamp) — supports future polling/push upgrades
-- [ ] Wire `GET /v1/leaderboard` route in Terraform with JWT authorizer
-- [ ] Lambda IAM: `dynamodb:Query` on `leaderboard_snapshot` table ARN
-- [ ] Smoke test: endpoint returns empty leaderboard (no ratings yet) with `version` field present
+- [x] Implement `app/lambdas/get_leaderboard/handler.py` — read from `leaderboard_snapshot` only (never scan `ratings`)
+- [x] Response includes `version` field (timestamp) — supports future polling/push upgrades
+- [x] Wire `GET /v1/leaderboard` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:Query` on `leaderboard_snapshot` table ARN
+- [x] Smoke test: endpoint returns empty leaderboard (no ratings yet) with `version` field present
 
-**Definition of done:** `GET /v1/leaderboard` returns `{"leaderboard": [], "version": "<timestamp>"}` or populated data. Never touches the `ratings` table directly.
+**Definition of done:** `GET /v1/leaderboard` returns `{"leaderboard": [], "version": "<timestamp>"}` or populated data. Never touches the `ratings` table directly. ✓
 
 ---
 
@@ -238,29 +240,29 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 - [x] Input validation: score must be integer 1–5; `restaurant_id` must be non-empty
 - [x] Wire `POST /v1/ratings` route in Terraform with JWT authorizer
 - [x] Lambda IAM: `dynamodb:PutItem` on `ratings`; `dynamodb:PutItem` on `rating_events`
-- [ ] Smoke test: POST a rating, verify item in DynamoDB directly; re-submit updates (does not duplicate) — **TODO: carry into Saturday**
+- [x] Smoke test: POST a rating, verify item in DynamoDB directly; re-submit updates (does not duplicate)
 - [x] Leaderboard recompute is a stub/pass for now — wired Saturday
 
-**Definition of done:** `POST /v1/ratings` upserts a rating and appends an audit event. Rating is idempotent. Leaderboard not yet updated.
+**Definition of done:** `POST /v1/ratings` upserts a rating and appends an audit event. Rating is idempotent. Leaderboard not yet updated. ✓
 
 ---
 
-### Saturday 2026-03-29 (Sprint 10 — Bayesian recompute + end-to-end — deep work)
+### Saturday 2026-03-28 (Sprint 10 — Bayesian recompute + end-to-end — deep work)
 
 **Goal:** Full rating loop functional. Phase 2 complete.
 
-- [ ] Implement leaderboard recompute: Bayesian average over all ratings for each restaurant; write ranked results to `leaderboard_snapshot` with `version` (timestamp) and `algorithm_version` attribute
-- [ ] Wire recompute as inline call from `submit_rating` (DynamoDB Streams upgrade path deferred to Phase 4)
-- [ ] Add `dynamodb:Scan` on `ratings` + `dynamodb:PutItem` on `leaderboard_snapshot` to `submit_rating` IAM role
-- [ ] Add restaurant existence check to `submit_rating`: `GetItem` on `restaurants` before accepting a rating; return 404 if not found
-- [ ] End-to-end smoke test: submit a rating → `GET /v1/leaderboard` reflects updated score with new `version`
-- [ ] Verify all Phase 2 leaderboard design constraints:
-  - [ ] Leaderboard reads never scan `ratings`
-  - [ ] Response includes `version` field
-  - [ ] `algorithm_version` stored as attribute on leaderboard items
-  - [ ] Restaurant IDs are stable slugs throughout
+- [x] Implement leaderboard recompute: Bayesian average over all ratings for each restaurant; write ranked results to `leaderboard_snapshot` with `version` (timestamp) and `algorithm_version` attribute
+- [x] Wire recompute as inline call from `submit_rating` (DynamoDB Streams upgrade path deferred to Phase 4)
+- [x] Add `dynamodb:Scan` on `ratings` + `dynamodb:BatchWriteItem`/`PutItem` on `leaderboard_snapshot` to `submit_rating` IAM role
+- [x] Add restaurant existence check to `submit_rating`: `GetItem` on `restaurants` before accepting a rating; return 404 if not found
+- [x] End-to-end smoke test: submit a rating → `GET /v1/leaderboard` reflects updated score with new `version`
+- [x] Verify all Phase 2 leaderboard design constraints:
+  - [x] Leaderboard reads never scan `ratings`
+  - [x] Response includes `version` field
+  - [x] `algorithm_version` stored as attribute on leaderboard items
+  - [x] Restaurant IDs are stable slugs throughout
 
-**Definition of done:** A user can submit a rating and immediately see the leaderboard update. Leaderboard response includes `version`. Rating is idempotent. All four core endpoints live in dev. Phase 2 complete.
+**Definition of done:** A user can submit a rating and immediately see the leaderboard update. Leaderboard response includes `version`. Rating is idempotent. All four core endpoints live in dev. Phase 2 complete. ✓
 
 ---
 
