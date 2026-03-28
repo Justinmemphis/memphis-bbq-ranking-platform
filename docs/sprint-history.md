@@ -131,3 +131,59 @@ _Wednesday and Friday sprints were not completed this week; Sprint 6 delivered o
 - [x] Smoke tested: valid JWT returns JSON array of seeded restaurants
 
 **Definition of done:** `GET /v1/restaurants` with a valid JWT returns a non-empty JSON array from real DynamoDB data. ✓ COMPLETE
+
+---
+
+## Week 4 (2026-03-23 – 2026-03-28)
+
+**Phase:** Phase 2 — Core Product Features (continued)
+
+---
+
+### Monday 2026-03-23 (Sprint 7 — `get_restaurant_detail`)
+
+- [x] Implemented `app/lambdas/get_restaurant_detail/handler.py` — GetItem by slug ID; clean 404 on unknown restaurant
+- [x] Input validation: reject blank/missing `restaurant_id`
+- [x] Wired `GET /v1/restaurants/{restaurant_id}` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:GetItem` on `restaurants` table ARN only
+- [x] Fixed `api_http` module: `statement_id` sanitisation now strips `{}` from path parameter route keys
+- [x] Smoke tested: valid ID returns restaurant; unknown ID returns clean 404
+
+**Definition of done:** `GET /v1/restaurants/{id}` returns the correct restaurant or a clean 404. ✓ COMPLETE
+
+---
+
+### Wednesday 2026-03-25 (Sprint 8 — `get_leaderboard`)
+
+- [x] Implemented `app/lambdas/get_leaderboard/handler.py` — reads `leaderboard_snapshot` only; never touches `ratings`
+- [x] Response includes `version` field (ISO 8601 timestamp of last recompute)
+- [x] Wired `GET /v1/leaderboard` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:Query` on `leaderboard_snapshot` ARN only
+- [x] Smoke tested: empty leaderboard returns `{"leaderboard": [], "version": "<timestamp>"}`
+
+**Definition of done:** `GET /v1/leaderboard` returns leaderboard data with `version` field. Never touches `ratings`. ✓ COMPLETE
+
+---
+
+### Friday 2026-03-27 (Sprint 9 — `submit_rating` write path)
+
+- [x] Implemented `app/lambdas/submit_rating/handler.py` — upserts rating (PK: user sub, SK: restaurant_id); appends audit event to `rating_events`
+- [x] Input validation: score must be integer 1–5; `restaurant_id` must be non-empty
+- [x] Wired `POST /v1/ratings` route in Terraform with JWT authorizer
+- [x] Lambda IAM: `dynamodb:PutItem` on `ratings` and `rating_events`
+- [x] Leaderboard recompute stubbed (wired Saturday)
+
+**Definition of done:** `POST /v1/ratings` upserts a rating and appends an audit event. ✓ COMPLETE
+
+---
+
+### Saturday 2026-03-28 (Sprint 10 — Bayesian recompute + end-to-end)
+
+- [x] Implemented inline Bayesian leaderboard recompute in `submit_rating` — Bayesian C=5, m=3.0 prior; scans all ratings, ranks by score, writes to `leaderboard_snapshot` with `version` and `algorithm_version`
+- [x] Added restaurant existence check to `submit_rating` — GetItem on `restaurants`; returns 404 if not found
+- [x] Expanded `submit_rating` IAM: `GetItem` on restaurants, `Scan` on ratings, `Query`/`DeleteItem`/`PutItem`/`BatchWriteItem` on leaderboard_snapshot
+- [x] End-to-end smoke test: submit rating → leaderboard updates with Bayesian score and new `version`
+- [x] Idempotency confirmed: re-submit updates score (one DynamoDB item, no duplicate)
+- [x] All Phase 2 leaderboard design constraints verified
+
+**Definition of done:** Full rating loop functional. All four Phase 2 endpoints live in dev. Phase 2 complete. ✓ COMPLETE
