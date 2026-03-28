@@ -157,6 +157,24 @@ Observability:
 
 ---
 
+### Pre-Prod Checklist (complete before any `terraform apply` against prod)
+
+All infrastructure is scaffolded and validated in dev first. When ready to flip to prod:
+
+- [ ] GitHub Actions: add `terraform apply` job triggered on merge to main, scoped to `infra/envs/prod/`
+- [ ] OIDC role: expand permissions to cover `terraform apply` on prod resources (currently plan-only)
+- [ ] WAF WebACL: `enable_waf = true` in `infra/envs/prod/terraform.tfvars`
+- [ ] Cognito prod User Pool: verify domain prefix, client settings, and callback URLs
+- [ ] Review all prod `terraform.tfvars` values — no dev defaults slipping through
+- [ ] Run `terraform plan` against prod and review line-by-line before first apply
+- [ ] Tag first prod release: `v0.1.0`
+
+**Deployment model:**
+- Dev: `terraform apply` runs locally with developer credentials (sandbox, no restrictions)
+- Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod
+
+---
+
 ### Phase 4 — Weeks 8–9: Operability + Resilience + Break & Fix
 
 **Objective:** Prove you can run the thing.
