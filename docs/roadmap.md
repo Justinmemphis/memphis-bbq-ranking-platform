@@ -161,6 +161,8 @@ Observability:
 
 All infrastructure is scaffolded and validated in dev first. When ready to flip to prod:
 
+- [ ] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
+- [ ] **Checkov skips documented:** Add remaining skip rules to `.github/workflows/terraform.yml` `skip_check` with written justifications: `CKV_AWS_26` (SNS KMS — Phase 3), `CKV_AWS_50` (X-Ray — Phase 4), `CKV_AWS_117` (Lambda VPC — intentional no-VPC architecture), `CKV_AWS_119` (DynamoDB KMS CMK — Phase 3), `CKV_AWS_158` (CloudWatch KMS — Phase 3), `CKV_AWS_173` (Lambda env KMS — env vars are table names only), `CKV_AWS_338` (log retention < 1 year — dev 14d/prod 60-90d by design)
 - [ ] GitHub Actions: add `terraform apply` job triggered on merge to main, scoped to `infra/envs/prod/`
 - [ ] OIDC role: expand permissions to cover `terraform apply` on prod resources (currently plan-only)
 - [ ] WAF WebACL: `enable_waf = true` in `infra/envs/prod/terraform.tfvars`
@@ -171,7 +173,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 
 **Deployment model:**
 - Dev: `terraform apply` runs locally with developer credentials (sandbox, no restrictions)
-- Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod
+- Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod ever
 
 ---
 
@@ -227,30 +229,34 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Monday 2026-03-30 (Sprint 11 — IaC scanning in CI — short)
+### Monday 2026-03-30 (Sprint 11 — IaC scanning in CI — short) ✓
 
 **Goal:** Pipeline blocks merges on IaC security findings. First CI security gate.
 
-- [ ] Add `checkov` scan step to `.github/workflows/terraform.yml` — runs on every PR after `terraform plan`
-- [ ] Scope to `infra/` directory; fail on HIGH/CRITICAL findings
-- [ ] Fix any existing findings checkov surfaces on the current codebase
-- [ ] Confirm CI gate blocks a test PR with a known-bad config, then passes on the fix
+- [x] Add `checkov` scan step to `.github/workflows/terraform.yml` — runs on every PR after `terraform plan`
+- [x] Scope to `infra/` directory; fail on HIGH/CRITICAL findings
+- [x] Fix any existing findings checkov surfaces on the current codebase (DynamoDB PITR; 7 intentional skips documented)
+- [x] Confirm CI gate blocks a test PR with a known-bad config, then passes on the fix
 
 **Definition of done:** PRs touching `infra/` must pass checkov before merge. At least one finding fixed as proof it works.
 
+**Status:** Complete 2026-04-01. 171 checks passing, 0 failures. Note: checkov is currently advisory — must add as required status check in GitHub branch protection before prod (see pre-prod checklist).
+
 ---
 
-### Wednesday 2026-04-02 (Sprint 12 — CloudWatch alarms — short)
+### Wednesday 2026-04-01 (Sprint 12 — CloudWatch alarms — short) ✓
 
 **Goal:** Operational visibility. Know when something breaks before users report it.
 
-- [ ] Lambda error alarm: `Errors > 0` for 5 consecutive minutes on all app Lambdas
-- [ ] API Gateway alarms: 5xx rate, p99 latency > 3s, throttle count > 0
-- [ ] SNS topic wired to alarms — email notification to dev address
-- [ ] All alarms provisioned via Terraform in `infra/modules/` (not console clicks)
-- [ ] Smoke test: invoke Lambda with bad input; confirm alarm triggers within 5 minutes
+- [x] Lambda error alarm: `Errors > 0` for 5 consecutive minutes on all app Lambdas
+- [x] API Gateway alarms: 5xx rate, p99 latency > 3s, throttle count > 0
+- [x] SNS topic wired to alarms — email notification to dev address
+- [x] All alarms provisioned via Terraform in `infra/modules/` (not console clicks)
+- [x] Smoke test: invoke Lambda with bad input; confirm alarm triggers within 5 minutes
 
 **Definition of done:** At least one alarm fires and delivers an email notification in dev.
+
+**Status:** Complete 2026-04-01. 8 alarms live in dev. SNS subscription confirmed. Note: `terraform apply` for GitHub Actions (even dev) to be discussed — see Friday sprint planning.
 
 ---
 
