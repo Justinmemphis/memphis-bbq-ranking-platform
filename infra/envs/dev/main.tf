@@ -266,6 +266,32 @@ module "api" {
   }
 }
 
+# --- CloudWatch Alarms + SNS ---
+# One error alarm per Lambda function; API Gateway 5xx, latency, and throttle alarms.
+# notification_email is set in terraform.tfvars — leave empty to skip email subscription.
+# Cost: ~$0.10/alarm/month (~$0.70/month total for this alarm set). SNS email: free tier.
+module "alarms" {
+  source      = "../../modules/alarms"
+  app_name    = var.app_name
+  environment = var.environment
+
+  lambda_function_names = [
+    module.lambda_health.function_name,
+    module.lambda_get_restaurants.function_name,
+    module.lambda_get_restaurant_detail.function_name,
+    module.lambda_get_leaderboard.function_name,
+    module.lambda_submit_rating.function_name,
+  ]
+
+  api_gateway_id     = module.api.api_id
+  notification_email = var.alarm_notification_email
+}
+
+output "alarms_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarms"
+  value       = module.alarms.sns_topic_arn
+}
+
 output "api_endpoint" {
   description = "Base URL for the dev API"
   value       = module.api.api_endpoint
