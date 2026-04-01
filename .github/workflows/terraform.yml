@@ -51,3 +51,41 @@ jobs:
         run: terraform plan -no-color
         # NOTE: terraform apply is NEVER run in CI.
         # The repository owner runs apply manually after reviewing the plan.
+
+  checkov:
+    name: IaC Security Scan (checkov)
+    runs-on: ubuntu-latest
+    # Run after plan so we only scan IaC that is syntactically valid.
+    # checkov does NOT require AWS credentials — it analyses static HCL only.
+    needs: plan-dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Run checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra/
+          # Fail the job on HIGH or CRITICAL findings only.
+          # MEDIUM/LOW generate warnings but do not block merge — reduces noise
+          # while still catching meaningful misconfigurations on day one.
+          soft_fail_on: LOW,MEDIUM
+          # checkov output format: sarif enables GitHub Security tab integration.
+          # results are also printed to the job log in CLI format for quick review.
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          # Skip rules that conflict with intentional design decisions:
+          #   CKV_AWS_115 — Lambda reserved concurrency: not set intentionally
+          #     (no concurrency limit in dev; prod will revisit in Phase 4)
+          #   CKV_AWS_272 — Lambda code signing: not used; we validate via source_code_hash
+          #   CKV_AWS_116 — Lambda DLQ: not configured; Phase 4 operability work
+          #   CKV2_AWS_29 — API GW WAF: WAF is prod-only (Phase 3); dev intentionally skipped
+          skip_check: CKV_AWS_115,CKV_AWS_272,CKV_AWS_116,CKV2_AWS_29
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        # Run even if checkov fails so results still appear in the Security tab.
+        if: always()
+        with:
+          sarif_file: results.sarif
