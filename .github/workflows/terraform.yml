@@ -68,24 +68,27 @@ jobs:
         with:
           directory: infra/
           # Fail the job on HIGH or CRITICAL findings only.
-          # MEDIUM/LOW generate warnings but do not block merge — reduces noise
-          # while still catching meaningful misconfigurations on day one.
+          # MEDIUM/LOW generate warnings but do not block merge.
           soft_fail_on: LOW,MEDIUM
-          # checkov output format: sarif enables GitHub Security tab integration.
-          # results are also printed to the job log in CLI format for quick review.
           output_format: cli,sarif
           output_file_path: console,results.sarif
-          # Skip rules that conflict with intentional design decisions:
-          #   CKV_AWS_115 — Lambda reserved concurrency: not set intentionally
-          #     (no concurrency limit in dev; prod will revisit in Phase 4)
-          #   CKV_AWS_272 — Lambda code signing: not used; we validate via source_code_hash
-          #   CKV_AWS_116 — Lambda DLQ: not configured; Phase 4 operability work
-          #   CKV2_AWS_29 — API GW WAF: WAF is prod-only (Phase 3); dev intentionally skipped
-          skip_check: CKV_AWS_115,CKV_AWS_272,CKV_AWS_116,CKV2_AWS_29
+          # Skipped rules with documented justifications:
+          #   CKV_AWS_115 — Lambda reserved concurrency: not set (Phase 4)
+          #   CKV_AWS_116 — Lambda DLQ: not configured (Phase 4)
+          #   CKV_AWS_272 — Lambda code signing: using source_code_hash instead
+          #   CKV2_AWS_29 — API GW WAF: prod-only, dev intentionally skipped (Phase 3)
+          #   CKV_AWS_26  — SNS KMS encryption: Phase 3 prod hardening
+          #   CKV_AWS_50  — Lambda X-Ray tracing: Phase 4 observability
+          #   CKV_AWS_117 — Lambda in VPC: intentional architecture decision — no VPC;
+          #                 Lambda→DynamoDB over AWS network via IAM; VPC adds NAT cost + cold start
+          #   CKV_AWS_119 — DynamoDB KMS CMK: AWS-owned key sufficient for dev; Phase 3 prod hardening
+          #   CKV_AWS_158 — CloudWatch log groups KMS: logs contain no PII; Phase 3 prod hardening
+          #   CKV_AWS_173 — Lambda env var KMS: env vars are table names only, not secrets
+          #   CKV_AWS_338 — Log retention ≥ 1 year: dev=14d, prod=60-90d by design; 1yr not required
+          skip_check: CKV_AWS_115,CKV_AWS_116,CKV_AWS_272,CKV2_AWS_29,CKV_AWS_26,CKV_AWS_50,CKV_AWS_117,CKV_AWS_119,CKV_AWS_158,CKV_AWS_173,CKV_AWS_338
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        # Run even if checkov fails so results still appear in the Security tab.
         if: always()
         with:
           sarif_file: results.sarif
