@@ -161,6 +161,8 @@ Observability:
 
 All infrastructure is scaffolded and validated in dev first. When ready to flip to prod:
 
+- [ ] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
+- [ ] **Checkov skips documented:** Add remaining skip rules to `.github/workflows/terraform.yml` `skip_check` with written justifications: `CKV_AWS_26` (SNS KMS — Phase 3), `CKV_AWS_50` (X-Ray — Phase 4), `CKV_AWS_117` (Lambda VPC — intentional no-VPC architecture), `CKV_AWS_119` (DynamoDB KMS CMK — Phase 3), `CKV_AWS_158` (CloudWatch KMS — Phase 3), `CKV_AWS_173` (Lambda env KMS — env vars are table names only), `CKV_AWS_338` (log retention < 1 year — dev 14d/prod 60-90d by design)
 - [ ] GitHub Actions: add `terraform apply` job triggered on merge to main, scoped to `infra/envs/prod/`
 - [ ] OIDC role: expand permissions to cover `terraform apply` on prod resources (currently plan-only)
 - [ ] WAF WebACL: `enable_waf = true` in `infra/envs/prod/terraform.tfvars`
@@ -171,7 +173,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 
 **Deployment model:**
 - Dev: `terraform apply` runs locally with developer credentials (sandbox, no restrictions)
-- Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod
+- Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod ever
 
 ---
 
