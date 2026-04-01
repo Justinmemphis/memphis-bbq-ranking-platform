@@ -8,9 +8,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write    # required for OIDC token exchange
+  id-token: write       # required for OIDC token exchange
   contents: read
   pull-requests: write  # to post plan output as a PR comment
+  security-events: write # required for checkov SARIF upload to GitHub Security tab
 
 jobs:
   plan-dev:
