@@ -23,3 +23,9 @@ variable "cognito_domain_prefix" {
   EOT
   type        = string
 }
+
+variable "alarm_notification_email" {
+  description = "Email address to receive CloudWatch alarm notifications. Leave empty to skip email subscription (SNS topic is still created). AWS sends a confirmation email — you must click the link to activate."
+  type        = string
+  default     = ""
+}
