@@ -285,8 +285,10 @@ resource "aws_iam_role_policy" "github_actions" {
       },
       # --- SNS: alarms topic (Sprint 12) ---
       # Terraform needs GetTopicAttributes to refresh SNS topic state during plan.
+      # GetSubscriptionAttributes/SetSubscriptionAttributes needed to refresh and
+      # manage email subscription state (subscription ARNs also match bbq-* prefix).
       # Publish is not granted here — Lambda execution roles handle that separately.
-      # Scoped to bbq-prefixed topics only.
+      # Scoped to bbq-prefixed topics and subscriptions only.
       {
         Sid    = "SNSManage"
         Effect = "Allow"
@@ -301,6 +303,8 @@ resource "aws_iam_role_policy" "github_actions" {
           "sns:Subscribe",
           "sns:Unsubscribe",
           "sns:ListSubscriptionsByTopic",
+          "sns:GetSubscriptionAttributes",
+          "sns:SetSubscriptionAttributes",
         ]
         Resource = "arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:bbq-*"
       },
