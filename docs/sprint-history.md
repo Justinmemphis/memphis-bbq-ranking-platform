@@ -187,3 +187,59 @@ _Wednesday and Friday sprints were not completed this week; Sprint 6 delivered o
 - [x] All Phase 2 leaderboard design constraints verified
 
 **Definition of done:** Full rating loop functional. All four Phase 2 endpoints live in dev. Phase 2 complete. ✓ COMPLETE
+
+---
+
+## Week 5 (2026-03-30 – 2026-04-04)
+
+**Phase:** Phase 3 — Security Hardening
+
+---
+
+### Monday 2026-03-30 (Sprint 11 — IaC scanning in CI)
+
+- [x] Added `checkov` scan step to `.github/workflows/terraform.yml` — runs after `terraform plan` on every PR
+- [x] Scoped to `infra/` directory; fails on HIGH/CRITICAL findings; MEDIUM/LOW are warnings only
+- [x] Fixed DynamoDB PITR: enabled `point_in_time_recovery` on all 4 tables (CKV_AWS_28)
+- [x] Documented 7 intentional checkov skips with written justifications in the workflow file
+- [x] Added `security-events: write` permission to workflow for SARIF upload to GitHub Security tab
+- [x] 171 checks passing, 0 failures on first clean run
+- [x] Gate verified: test PR with known-bad config blocked; fix unblocked it
+
+**Definition of done:** PRs touching `infra/` must pass checkov before merge. ✓ COMPLETE
+
+Note: checkov is currently advisory only — must add as required status check in branch protection before prod.
+
+---
+
+### Wednesday 2026-04-01 (Sprint 12 — CloudWatch alarms)
+
+- [x] Implemented `infra/modules/alarms/` — SNS topic + Lambda error alarms (all 5 functions) + API Gateway alarms (5xx, p99 latency, throttles)
+- [x] 8 alarms total wired to `bbq-dev-alarms` SNS topic
+- [x] SNS email subscription confirmed — alarm notifications delivered to jcarter82@gmail.com
+- [x] All alarms provisioned via Terraform; no console clicks
+- [x] Smoke tested: bad Lambda invocation triggered alarm within 5-minute window
+
+**Definition of done:** At least one alarm fires and delivers email notification in dev. ✓ COMPLETE
+
+---
+
+### Saturday 2026-04-04 (Week 5 Housekeeping + Sprints 13)
+
+**Housekeeping — OIDC permissions and infrastructure reconciliation:**
+
+- [x] Fixed OIDC role: added SNS + CloudWatch Alarms permissions (PR #18) — unblocked terraform plan in CI
+- [x] Fixed OIDC role: moved `cognito-idp:DescribeUserPoolDomain` to `CognitoGlobal` statement (requires `Resource: *`) — unblocked plan refresh
+- [x] Fixed OIDC role: added `SNS:GetSubscriptionAttributes` + `SetSubscriptionAttributes` (PR #21) — unblocked subscription state refresh
+- [x] Reconciled SNS email subscription into Terraform state via `terraform import` — subscription now fully managed by Terraform
+- [x] Removed `alarm_notification_email = ""` from `infra/envs/dev/terraform.tfvars` — empty string was overriding `TF_VAR` env var (tfvars take precedence)
+- [x] Moved `terraform apply` to GitHub Actions for all environments — dev apply now runs automatically on merge to main; no local apply for any environment (ADR 0002, CLAUDE.md updated)
+
+**Sprint 13 — Python dependency scanning in CI:**
+
+- [x] Created `app/requirements.txt` with `boto3==1.42.83` pinned for scanning (runtime-provided, not packaged)
+- [x] Added `.github/workflows/python.yml` — Lint (ruff) + Dependency Scan (pip-audit) on `app/**` PRs
+- [x] pip-audit fails on vulnerabilities with a fix available; `--no-deps` scans only explicitly listed packages
+- [x] Gate verified: `requests==2.6.0` (5 known CVEs) correctly blocked PR #23; PR closed without merge
+
+**Definition of done:** PRs fail CI if pip-audit finds a vulnerability with a fix available. ✓ COMPLETE

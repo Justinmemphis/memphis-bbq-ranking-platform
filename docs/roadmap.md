@@ -60,7 +60,7 @@ The app is Memphis BBQ. The portfolio signal is production-grade cloud security 
 
 **Deliverables:**
 - [x] Terraform foundation: remote state (S3 + DynamoDB lock), environments (dev/prod), baseline networking
-- [x] GitHub Actions pipeline: OIDC role assumption, `plan` on PR, `apply` on merge (user-triggered)
+- [x] GitHub Actions pipeline: OIDC role assumption, `plan` on PR, `apply` on merge (CI-only via OIDC — ADR 0002)
 - [ ] Frontend skeleton deployed: S3 + CloudFront, even just "Coming Soon" — deferred to Phase 2
 - [x] Backend skeleton deployed: Lambda + API Gateway `/health` endpoint
 - [ ] Observability baseline: structured logs done; CloudWatch dashboard deferred to Phase 4
@@ -163,8 +163,8 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 
 - [ ] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
 - [ ] **Checkov skips documented:** Add remaining skip rules to `.github/workflows/terraform.yml` `skip_check` with written justifications: `CKV_AWS_26` (SNS KMS — Phase 3), `CKV_AWS_50` (X-Ray — Phase 4), `CKV_AWS_117` (Lambda VPC — intentional no-VPC architecture), `CKV_AWS_119` (DynamoDB KMS CMK — Phase 3), `CKV_AWS_158` (CloudWatch KMS — Phase 3), `CKV_AWS_173` (Lambda env KMS — env vars are table names only), `CKV_AWS_338` (log retention < 1 year — dev 14d/prod 60-90d by design)
-- [ ] GitHub Actions: add `terraform apply` job triggered on merge to main, scoped to `infra/envs/prod/`
-- [ ] OIDC role: expand permissions to cover `terraform apply` on prod resources (currently plan-only)
+- [x] GitHub Actions: `terraform apply` on merge to main wired for dev (ADR 0002) — prod apply job still needs to be scoped to `infra/envs/prod/`
+- [ ] OIDC role: audit and expand permissions for prod apply (dev apply permissions already in place)
 - [ ] WAF WebACL: `enable_waf = true` in `infra/envs/prod/terraform.tfvars`
 - [ ] Cognito prod User Pool: verify domain prefix, client settings, and callback URLs
 - [ ] Review all prod `terraform.tfvars` values — no dev defaults slipping through
@@ -172,7 +172,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 - [ ] Tag first prod release: `v0.1.0`
 
 **Deployment model:**
-- Dev: `terraform apply` runs locally with developer credentials (sandbox, no restrictions)
+- Dev: `terraform apply` runs in GitHub Actions on merge to main (CI-only since 2026-04-04 — ADR 0002)
 - Prod: `terraform apply` runs in GitHub Actions only, triggered by merge to main via OIDC — no local apply to prod ever
 
 ---
@@ -221,73 +221,63 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-## Week 5 Sprint Plan (2026-03-30 – 2026-04-05)
+## Week 5 (2026-03-30 – 2026-04-04)
 
 **Phase:** Phase 3 — Security Hardening
 
-**Goal:** Make DevSecOps visible and concrete. By end of Saturday: IaC scanning in CI, CloudWatch alarms live, WAF on the API, and the threat model written.
+_Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.md)._
+
+- Sprint 11 (2026-03-30): Checkov IaC scanning in CI ✓
+- Sprint 12 (2026-04-01): CloudWatch alarms live in dev ✓
+- Sprint 13 (2026-04-04): Python lint + pip-audit dependency scanning in CI ✓
+- Housekeeping (2026-04-04): OIDC permissions fixed; SNS subscription imported; CI-only apply for all environments (ADR 0002) ✓
 
 ---
 
-### Monday 2026-03-30 (Sprint 11 — IaC scanning in CI — short) ✓
+## Week 6 Sprint Plan (2026-04-07 – 2026-04-11)
 
-**Goal:** Pipeline blocks merges on IaC security findings. First CI security gate.
+**Phase:** Phase 3 — Security Hardening (continued)
 
-- [x] Add `checkov` scan step to `.github/workflows/terraform.yml` — runs on every PR after `terraform plan`
-- [x] Scope to `infra/` directory; fail on HIGH/CRITICAL findings
-- [x] Fix any existing findings checkov surfaces on the current codebase (DynamoDB PITR; 7 intentional skips documented)
-- [x] Confirm CI gate blocks a test PR with a known-bad config, then passes on the fix
-
-**Definition of done:** PRs touching `infra/` must pass checkov before merge. At least one finding fixed as proof it works.
-
-**Status:** Complete 2026-04-01. 171 checks passing, 0 failures. Note: checkov is currently advisory — must add as required status check in GitHub branch protection before prod (see pre-prod checklist).
+**Goal:** WAF scaffolded for prod, threat model written, branch protection hardened. Three short sprints — no Saturday deep work this week.
 
 ---
 
-### Wednesday 2026-04-01 (Sprint 12 — CloudWatch alarms — short) ✓
+### Monday 2026-04-07 (Sprint 14 — WAF Terraform module — short)
 
-**Goal:** Operational visibility. Know when something breaks before users report it.
+**Goal:** Edge protection scaffolded for prod. WAF is prod-only — WebACL costs apply even with no traffic, so dev stays unprotected intentionally.
 
-- [x] Lambda error alarm: `Errors > 0` for 5 consecutive minutes on all app Lambdas
-- [x] API Gateway alarms: 5xx rate, p99 latency > 3s, throttle count > 0
-- [x] SNS topic wired to alarms — email notification to dev address
-- [x] All alarms provisioned via Terraform in `infra/modules/` (not console clicks)
-- [x] Smoke test: invoke Lambda with bad input; confirm alarm triggers within 5 minutes
-
-**Definition of done:** At least one alarm fires and delivers an email notification in dev.
-
-**Status:** Complete 2026-04-01. 8 alarms live in dev. SNS subscription confirmed. Note: `terraform apply` for GitHub Actions (even dev) to be discussed — see Friday sprint planning.
-
----
-
-### Saturday 2026-04-04 (Sprint 13 — Python dependency scanning in CI — short) ✅
-
-**Goal:** Supply chain visibility. Know if a dependency has a known CVE before it ships.
-
-- [x] Add `pip-audit` scan to GitHub Actions — runs against `app/` requirements on every PR
-- [x] Pipeline fails on known vulnerabilities with no fix available
-- [x] Pin all Lambda dependencies in `app/requirements.txt` with exact versions
-- [x] Confirm CI passes on clean deps; introduce a known-bad pin to verify the gate works
-
-**Definition of done:** PRs fail CI if `pip-audit` finds a vulnerability with a fix available. ✅
-
----
-
-### Saturday 2026-04-05 (Sprint 14 — WAF + threat model — deep work)
-
-**Goal:** Edge protection scaffolded for prod; threat model written; Phase 3 security hardening 60%+ done.
-
-WAF is prod-only — WebACL costs apply even with no traffic, so dev stays unprotected intentionally. The Terraform module uses a variable to gate WAF on/off per environment.
-
-- [ ] Add `enable_waf` variable to `infra/modules/api_http/` (or a new `waf` module); default false
-- [ ] Set `enable_waf = true` in `infra/envs/prod/terraform.tfvars` only
-- [ ] WAF WebACL: AWS managed rules (AWSManagedRulesCommonRuleSet + AWSManagedRulesKnownBadInputsRuleSet)
+- [ ] Create `infra/modules/waf/` module: `enable_waf` variable (default false), WAF WebACL resource
+- [ ] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
 - [ ] Rate limit rule: 1000 requests / 5 minutes per IP (abuse control on rating submissions)
-- [ ] Associate WebACL with API Gateway stage (prod only)
-- [ ] Write `docs/03-threat-model.md` — assets, threats, mitigations mapped to actual controls now in place
-- [ ] Update `docs/04-cost-estimate.md` for WAF ACL + rule costs (prod only)
+- [ ] Associate WebACL with API Gateway stage when `enable_waf = true`
+- [ ] Set `enable_waf = true` in `infra/envs/prod/terraform.tfvars`; dev stays false
+- [ ] `terraform plan` for prod shows WebACL; dev plan shows no WAF resources
 
-**Definition of done:** WAF Terraform module scaffolded; `terraform plan` for prod shows WebACL; dev plan shows no WAF resources. Threat model document committed.
+**Definition of done:** WAF module scaffolded; prod plan shows WebACL; dev plan clean.
+
+---
+
+### Wednesday 2026-04-09 (Sprint 15 — Threat model — short)
+
+**Goal:** Document the actual attack surface and controls in place. This is a writing sprint.
+
+- [ ] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), and mitigations mapped to actual controls
+- [ ] Update `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
+
+**Definition of done:** Threat model committed; every major threat has a named control mapped to it.
+
+---
+
+### Friday 2026-04-11 (Sprint 16 — Branch protection + pre-prod checklist — short)
+
+**Goal:** Harden CI gates and verify the pre-prod checklist is current before prod work begins.
+
+- [ ] Add `IaC Security Scan (checkov)` as required status check in GitHub branch protection for `main` — moves checkov from advisory to blocking
+- [ ] Review full pre-prod checklist line-by-line; mark completed items, identify gaps
+- [ ] Verify `infra/envs/prod/terraform.tfvars` — confirm no dev defaults slipping through
+- [ ] Run `terraform plan` against prod and review output
+
+**Definition of done:** Checkov is a required status check; prod plan reviewed; pre-prod checklist updated.
 
 ---
 
