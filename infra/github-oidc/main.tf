@@ -225,6 +225,9 @@ resource "aws_iam_role_policy" "github_actions" {
         Action = [
           "cognito-idp:CreateUserPool",
           "cognito-idp:ListUserPools",
+          # DescribeUserPoolDomain operates on the domain (not userpool ARN) —
+          # AWS requires Resource: "*" for this call; userpool/* scope is rejected.
+          "cognito-idp:DescribeUserPoolDomain",
         ]
         Resource = "*"
       },
@@ -244,7 +247,6 @@ resource "aws_iam_role_policy" "github_actions" {
           "cognito-idp:ListUserPoolClients",
           "cognito-idp:CreateUserPoolDomain",
           "cognito-idp:DeleteUserPoolDomain",
-          "cognito-idp:DescribeUserPoolDomain",
           "cognito-idp:TagResource",
           "cognito-idp:UntagResource",
           "cognito-idp:ListTagsForResource",
