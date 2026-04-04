@@ -10,7 +10,8 @@
 
 - Claude may run `git add` and `git commit`.
 - **Only the user runs `git push`.** Claude must never push to the remote repository.
-- The user manually reviews all GitHub pull requests and merges. Claude should not attempt to open, merge, or close PRs.
+- Claude may open pull requests using `gh pr create`.
+- **Only the user approves and merges pull requests.** Claude must never merge or close PRs.
 - **Any change under `infra/` must go through a PR** — never commit directly to main for infrastructure changes. Branch → PR → plan runs → merge → apply.
 
 ## How Claude Should Assist on This Project
