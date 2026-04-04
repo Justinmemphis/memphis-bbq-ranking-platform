@@ -260,16 +260,16 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Friday 2026-04-04 (Sprint 13 — Python dependency scanning in CI — short)
+### Saturday 2026-04-04 (Sprint 13 — Python dependency scanning in CI — short) ✅
 
 **Goal:** Supply chain visibility. Know if a dependency has a known CVE before it ships.
 
-- [ ] Add `pip-audit` scan to GitHub Actions — runs against `app/` requirements on every PR
-- [ ] Pipeline fails on known vulnerabilities with no fix available
-- [ ] Pin all Lambda dependencies in `app/requirements.txt` with exact versions
-- [ ] Confirm CI passes on clean deps; introduce a known-bad pin to verify the gate works
+- [x] Add `pip-audit` scan to GitHub Actions — runs against `app/` requirements on every PR
+- [x] Pipeline fails on known vulnerabilities with no fix available
+- [x] Pin all Lambda dependencies in `app/requirements.txt` with exact versions
+- [x] Confirm CI passes on clean deps; introduce a known-bad pin to verify the gate works
 
-**Definition of done:** PRs fail CI if `pip-audit` finds a vulnerability with a fix available.
+**Definition of done:** PRs fail CI if `pip-audit` finds a vulnerability with a fix available. ✅
 
 ---
 
