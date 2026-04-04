@@ -8,3 +8,4 @@
 # is released. Verify the new version against the Lambda runtime docs
 # before bumping: https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
 boto3==1.42.83
+requests==2.6.0
