@@ -1,7 +1,11 @@
-name: Terraform Plan
+name: Terraform
 
 on:
   pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+  push:
     branches: [main]
     paths:
       - "infra/**"
@@ -16,6 +20,8 @@ permissions:
 jobs:
   plan-dev:
     name: Plan (dev)
+    # Run on PRs and manual dispatches only — apply job handles push-to-main.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
 
@@ -50,8 +56,8 @@ jobs:
       - name: Terraform Plan
         working-directory: infra/envs/dev
         run: terraform plan -no-color
-        # NOTE: terraform apply is NEVER run in CI.
-        # The repository owner runs apply manually after reviewing the plan.
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
 
   checkov:
     name: IaC Security Scan (checkov)
@@ -93,3 +99,37 @@ jobs:
         if: always()
         with:
           sarif_file: results.sarif
+
+  apply-dev:
+    name: Apply (dev)
+    # Runs only when infra/** changes land on main (i.e. after a PR is merged).
+    # Plan and checkov must have passed on the PR before merge — this job applies
+    # the already-reviewed plan. No manual apply should ever run locally.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: "~1.5"
+
+      - name: Terraform Init
+        working-directory: infra/envs/dev
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/envs/dev
+        run: terraform apply -auto-approve -no-color
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
