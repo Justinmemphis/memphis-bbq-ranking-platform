@@ -53,9 +53,11 @@ resource "aws_sns_topic" "alarms" {
 resource "aws_sns_topic_subscription" "email" {
   count = var.notification_email != "" ? 1 : 0
 
-  topic_arn = aws_sns_topic.alarms.arn
-  protocol  = "email"
-  endpoint  = var.notification_email
+  topic_arn                       = aws_sns_topic.alarms.arn
+  protocol                        = "email"
+  endpoint                        = var.notification_email
+  confirmation_timeout_in_minutes = 1
+  endpoint_auto_confirms          = false
 }
 
 # --- Lambda error alarms ---
