@@ -3,8 +3,8 @@
 ## Terraform
 
 - Claude may run `terraform init` and `terraform plan` freely.
-- **Only the user runs `terraform apply`.** Claude must never run `terraform apply` under any circumstance, even if asked or if it appears safe.
-- Always present plan output for review before suggesting the user run apply.
+- **`terraform apply` is only ever run by GitHub Actions** — never locally, never by Claude. All environments (dev and prod) are applied exclusively via the CI/CD pipeline on merge to main.
+- Always present plan output for review before a PR is merged. The apply happens automatically after merge.
 
 ## Git / GitHub
 
