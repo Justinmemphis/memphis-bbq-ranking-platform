@@ -1,0 +1,10 @@
+# Lambda runtime dependencies — pinned for pip-audit supply chain scanning.
+#
+# boto3 is pre-installed in the Python 3.12 Lambda runtime and is NOT
+# packaged in the Lambda zip. It is listed here so pip-audit can check
+# the pinned version against known CVEs on every PR.
+#
+# Update this pin when AWS updates the Lambda runtime or when a CVE fix
+# is released. Verify the new version against the Lambda runtime docs
+# before bumping: https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
+boto3==1.42.83
