@@ -84,6 +84,7 @@ resource "aws_iam_role" "github_actions" {
 #   Sprint 2: S3 state + DynamoDB lock + DynamoDB app tables
 #   Sprint 4: Lambda + API Gateway + IAM exec roles + CloudWatch Logs
 #   Sprint 5: Cognito User Pool + App Client + Hosted UI domain
+#   Sprint 12: SNS alarms topic + CloudWatch metric alarms
 #
 # Security note: permissions are scoped to specific resource ARNs
 # where possible. API Gateway ARNs do not include the account ID
@@ -224,6 +225,9 @@ resource "aws_iam_role_policy" "github_actions" {
         Action = [
           "cognito-idp:CreateUserPool",
           "cognito-idp:ListUserPools",
+          # DescribeUserPoolDomain operates on the domain (not userpool ARN) —
+          # AWS requires Resource: "*" for this call; userpool/* scope is rejected.
+          "cognito-idp:DescribeUserPoolDomain",
         ]
         Resource = "*"
       },
@@ -243,7 +247,6 @@ resource "aws_iam_role_policy" "github_actions" {
           "cognito-idp:ListUserPoolClients",
           "cognito-idp:CreateUserPoolDomain",
           "cognito-idp:DeleteUserPoolDomain",
-          "cognito-idp:DescribeUserPoolDomain",
           "cognito-idp:TagResource",
           "cognito-idp:UntagResource",
           "cognito-idp:ListTagsForResource",
@@ -279,6 +282,43 @@ resource "aws_iam_role_policy" "github_actions" {
           "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/bbq-*",
           "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/apigateway/bbq-*",
         ]
+      },
+      # --- SNS: alarms topic (Sprint 12) ---
+      # Terraform needs GetTopicAttributes to refresh SNS topic state during plan.
+      # Publish is not granted here — Lambda execution roles handle that separately.
+      # Scoped to bbq-prefixed topics only.
+      {
+        Sid    = "SNSManage"
+        Effect = "Allow"
+        Action = [
+          "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:ListTagsForResource",
+          "sns:TagResource",
+          "sns:UntagResource",
+          "sns:Subscribe",
+          "sns:Unsubscribe",
+          "sns:ListSubscriptionsByTopic",
+        ]
+        Resource = "arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:bbq-*"
+      },
+      # --- CloudWatch Alarms (Sprint 12) ---
+      # Terraform needs Describe/Put/Delete to manage metric alarms.
+      # Scoped to bbq-prefixed alarms only.
+      {
+        Sid    = "CloudWatchAlarmsManage"
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:PutMetricAlarm",
+          "cloudwatch:DeleteAlarms",
+          "cloudwatch:ListTagsForResource",
+          "cloudwatch:TagResource",
+          "cloudwatch:UntagResource",
+        ]
+        Resource = "arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:bbq-*"
       },
     ]
   })
