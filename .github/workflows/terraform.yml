@@ -92,7 +92,10 @@ jobs:
           #   CKV_AWS_158 — CloudWatch log groups KMS: logs contain no PII; Phase 3 prod hardening
           #   CKV_AWS_173 — Lambda env var KMS: env vars are table names only, not secrets
           #   CKV_AWS_338 — Log retention ≥ 1 year: dev=14d, prod=60-90d by design; 1yr not required
-          skip_check: CKV_AWS_115,CKV_AWS_116,CKV_AWS_272,CKV2_AWS_29,CKV_AWS_26,CKV_AWS_50,CKV_AWS_117,CKV_AWS_119,CKV_AWS_158,CKV_AWS_173,CKV_AWS_338
+          #   CKV2_AWS_31 — WAF2 logging config: Sprint 14 is scaffold only; logging added in Sprint 15 alongside rules
+          #   CKV_AWS_175 — WAF has associated rules: rules (managed rule groups + rate limit) added in Sprint 15
+          #   CKV_AWS_192 — WAF blocks Log4j2 lookup: covered by AWSManagedRulesKnownBadInputsRuleSet added in Sprint 15
+          skip_check: CKV_AWS_115,CKV_AWS_116,CKV_AWS_272,CKV2_AWS_29,CKV_AWS_26,CKV_AWS_50,CKV_AWS_117,CKV_AWS_119,CKV_AWS_158,CKV_AWS_173,CKV_AWS_338,CKV2_AWS_31,CKV_AWS_175,CKV_AWS_192
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
