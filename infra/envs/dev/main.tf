@@ -287,6 +287,18 @@ module "alarms" {
   notification_email = var.alarm_notification_email
 }
 
+# --- WAF WebACL ---
+# Dev intentionally has enable_waf = false — WAF costs ~$5/month regardless of traffic.
+# The module call exists here so the same Terraform structure applies to both envs;
+# only prod sets enable_waf = true (in terraform.tfvars).
+# Association with API Gateway is wired in Sprint 15 once the rules are also in place.
+module "waf" {
+  source      = "../../modules/waf"
+  app_name    = var.app_name
+  environment = var.environment
+  enable_waf  = var.enable_waf
+}
+
 output "alarms_sns_topic_arn" {
   description = "SNS topic ARN for CloudWatch alarms"
   value       = module.alarms.sns_topic_arn

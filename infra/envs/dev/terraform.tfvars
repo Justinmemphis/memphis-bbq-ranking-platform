@@ -6,6 +6,9 @@ region      = "us-east-1"
 # If 'bbq-ranking-dev' is taken, change to 'bbq-ranking-dev-<suffix>' and re-apply.
 cognito_domain_prefix = "bbq-ranking-dev"
 
+# WAF is prod-only. Dev has no WebACL — saves ~$5/month in base fees.
+enable_waf = false
+
 # Email address for CloudWatch alarm notifications.
 # NOT set here — pass via environment variable to keep your email out of git:
 #   export TF_VAR_alarm_notification_email="your@email.com"

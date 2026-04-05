@@ -68,13 +68,13 @@ resource "aws_sns_topic_subscription" "email" {
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   for_each = toset(var.lambda_function_names)
 
-  alarm_name        = "${each.value}-errors"
-  alarm_description = "Lambda ${each.value} recorded at least 1 error in a 5-minute window. Investigate CloudWatch logs immediately."
-  namespace         = "AWS/Lambda"
-  metric_name       = "Errors"
-  dimensions        = { FunctionName = each.value }
-  statistic         = "Sum"
-  period            = 300
+  alarm_name          = "${each.value}-errors"
+  alarm_description   = "Lambda ${each.value} recorded at least 1 error in a 5-minute window. Investigate CloudWatch logs immediately."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  dimensions          = { FunctionName = each.value }
+  statistic           = "Sum"
+  period              = 300
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"

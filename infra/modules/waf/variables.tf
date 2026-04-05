@@ -1,23 +1,19 @@
 variable "app_name" {
   description = "Application name prefix used in all resource names"
   type        = string
-  default     = "bbq"
 }
 
 variable "environment" {
   description = "Deployment environment (dev or prod)"
   type        = string
-  default     = "prod"
-}
-
-variable "region" {
-  description = "AWS region for all resources"
-  type        = string
-  default     = "us-east-1"
 }
 
 variable "enable_waf" {
-  description = "Whether to create the WAF WebACL. Prod should always be true."
+  description = <<-EOT
+    Whether to create the WAF WebACL.
+    Set to true for prod only — WebACL costs ~$5/month regardless of traffic,
+    so dev intentionally runs without WAF protection.
+  EOT
   type        = bool
-  default     = true
+  default     = false
 }

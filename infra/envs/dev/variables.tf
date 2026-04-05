@@ -29,3 +29,9 @@ variable "alarm_notification_email" {
   type        = string
   default     = ""
 }
+
+variable "enable_waf" {
+  description = "Whether to create the WAF WebACL. Dev is always false — WAF costs ~$5/month regardless of traffic."
+  type        = bool
+  default     = false
+}

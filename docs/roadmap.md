@@ -23,13 +23,13 @@ The app is Memphis BBQ. The portfolio signal is production-grade cloud security 
 
 ## Work Cadence
 
+Default cadence (all weeks from Week 6 onward):
+
 | Day | Purpose |
 |---|---|
-| Monday | Planning, backlog grooming, sprint goal selection |
-| Wednesday | Build sprint (small, shippable slices) |
-| Friday | Build sprint (small, shippable slices) |
-| Saturday | Deep work (infra, security hardening, refactors) |
-| Sunday (optional) | Write-up, diagrams, README updates, LinkedIn posts |
+| Monday–Friday | Short sprints (shippable slices) |
+| Saturday | Deep work (infra, security hardening, refactors, write-ups) |
+| Sunday | Deep work (continued; diagrams, ADRs, LinkedIn posts) |
 
 ---
 
@@ -234,50 +234,93 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-## Week 6 Sprint Plan (2026-04-07 – 2026-04-11)
+## Week 6 Sprint Plan (2026-04-05 – 2026-04-10)
 
 **Phase:** Phase 3 — Security Hardening (continued)
 
-**Goal:** WAF scaffolded for prod, threat model written, branch protection hardened. Three short sprints — no Saturday deep work this week.
+**Goal:** WAF scaffolded for prod, threat model written, branch protection hardened, secrets moved to SSM. Six short sprints Sun–Fri; no Saturday session this week. Week 7 opens with a long session Sunday 2026-04-12.
 
 ---
 
-### Monday 2026-04-07 (Sprint 14 — WAF Terraform module — short)
+### Sunday 2026-04-05 (Sprint 14 — WAF module scaffold — short)
 
-**Goal:** Edge protection scaffolded for prod. WAF is prod-only — WebACL costs apply even with no traffic, so dev stays unprotected intentionally.
+**Goal:** Create the WAF Terraform module skeleton and wire the `enable_waf` flag into both environments.
 
-- [ ] Create `infra/modules/waf/` module: `enable_waf` variable (default false), WAF WebACL resource
+- [ ] Create `infra/modules/waf/` module: `main.tf`, `variables.tf`, `outputs.tf`
+- [ ] `enable_waf` variable (default false); module creates no resources when false
+- [ ] WAF WebACL resource with `scope = "REGIONAL"` (API Gateway)
+- [ ] Set `enable_waf = false` in dev tfvars; `enable_waf = true` in prod tfvars
+- [ ] `terraform plan` for dev shows no WAF resources; prod plan shows WebACL stub
+
+**Definition of done:** WAF module exists; dev plan clean; prod plan shows WebACL resource.
+
+---
+
+### Monday 2026-04-06 (Sprint 15 — WAF rules + rate limit — short)
+
+**Goal:** Add AWS managed rule groups and a per-IP rate limit rule to the WAF module.
+
 - [ ] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
 - [ ] Rate limit rule: 1000 requests / 5 minutes per IP (abuse control on rating submissions)
 - [ ] Associate WebACL with API Gateway stage when `enable_waf = true`
-- [ ] Set `enable_waf = true` in `infra/envs/prod/terraform.tfvars`; dev stays false
-- [ ] `terraform plan` for prod shows WebACL; dev plan shows no WAF resources
+- [ ] `terraform plan` for prod shows all rules and association; dev plan still clean
 
-**Definition of done:** WAF module scaffolded; prod plan shows WebACL; dev plan clean.
+**Definition of done:** Prod plan shows full WAF WebACL with managed rules and rate limit; dev unaffected.
 
 ---
 
-### Wednesday 2026-04-09 (Sprint 15 — Threat model — short)
+### Tuesday 2026-04-07 (Sprint 16 — Threat model — short)
 
-**Goal:** Document the actual attack surface and controls in place. This is a writing sprint.
+**Goal:** Document the actual attack surface and controls in place. Writing sprint.
 
-- [ ] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), and mitigations mapped to actual controls
+- [ ] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), mitigations mapped to actual controls
 - [ ] Update `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
 
-**Definition of done:** Threat model committed; every major threat has a named control mapped to it.
+**Definition of done:** Threat model committed; every major threat has a named control mapped to it; cost estimate updated.
 
 ---
 
-### Friday 2026-04-11 (Sprint 16 — Branch protection + pre-prod checklist — short)
+### Wednesday 2026-04-08 (Sprint 17 — Branch protection + checkov required — short)
 
-**Goal:** Harden CI gates and verify the pre-prod checklist is current before prod work begins.
+**Goal:** Make checkov a hard CI gate, not advisory.
 
-- [ ] Add `IaC Security Scan (checkov)` as required status check in GitHub branch protection for `main` — moves checkov from advisory to blocking
+- [ ] Add `IaC Security Scan (checkov)` as required status check in GitHub → Settings → Branches → branch protection for `main`
+- [ ] Verify all 7 documented Checkov skip rules are in `.github/workflows/terraform.yml` with written justifications
+- [ ] Open and merge a test PR to confirm checkov blocks/passes correctly
+
+**Definition of done:** Checkov is a required status check; a failed checkov blocks merge.
+
+---
+
+### Thursday 2026-04-09 (Sprint 18 — Pre-prod checklist review — short)
+
+**Goal:** Audit the pre-prod checklist and prod tfvars before any prod apply.
+
 - [ ] Review full pre-prod checklist line-by-line; mark completed items, identify gaps
 - [ ] Verify `infra/envs/prod/terraform.tfvars` — confirm no dev defaults slipping through
-- [ ] Run `terraform plan` against prod and review output
+- [ ] Run `terraform plan` against prod and review output line-by-line
+- [ ] Document any remaining blockers before prod is live
 
-**Definition of done:** Checkov is a required status check; prod plan reviewed; pre-prod checklist updated.
+**Definition of done:** Pre-prod checklist updated; prod plan reviewed and no surprises.
+
+---
+
+### Friday 2026-04-10 (Sprint 19 — Secrets in SSM Parameter Store — short)
+
+**Goal:** Move any plaintext config out of Lambda env vars and into SSM. No secrets in code or tfvars.
+
+- [ ] Identify all plaintext config currently passed as Lambda env vars (table names are fine; anything credential-like is not)
+- [ ] Add SSM Parameter Store resources in Terraform for any true secrets
+- [ ] Update Lambda IAM roles with least-privilege `ssm:GetParameter` permissions
+- [ ] Verify Lambda can read secrets at runtime; no plaintext secrets remain in Terraform or env vars
+
+**Definition of done:** All secrets are in SSM; Lambda IAM grants only the params it needs; no plaintext secrets in code.
+
+---
+
+### Sunday 2026-04-12 (Deep work — Week 7 kickoff)
+
+**Goal:** Long session to open Week 7. Candidate topics: Admin Cognito group + admin route guard, Admin UI scaffold (S3 + CloudFront), or structured logging audit — pick one based on energy and priority.
 
 ---
 
