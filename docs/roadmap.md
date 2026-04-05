@@ -242,15 +242,16 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Sunday 2026-04-05 (Sprint 14 — WAF module scaffold — short)
+### Sunday 2026-04-05 (Sprint 14 — WAF module scaffold — short) ✓
 
 **Goal:** Create the WAF Terraform module skeleton and wire the `enable_waf` flag into both environments.
 
-- [ ] Create `infra/modules/waf/` module: `main.tf`, `variables.tf`, `outputs.tf`
-- [ ] `enable_waf` variable (default false); module creates no resources when false
-- [ ] WAF WebACL resource with `scope = "REGIONAL"` (API Gateway)
-- [ ] Set `enable_waf = false` in dev tfvars; `enable_waf = true` in prod tfvars
-- [ ] `terraform plan` for dev shows no WAF resources; prod plan shows WebACL stub
+- [x] Create `infra/modules/waf/` module: `main.tf`, `variables.tf`, `outputs.tf`
+- [x] `enable_waf` variable (default false); module creates no resources when false
+- [x] WAF WebACL resource with `scope = "REGIONAL"` (API Gateway)
+- [x] Set `enable_waf = false` in dev tfvars; `enable_waf = true` in prod tfvars
+- [x] `terraform plan` for dev shows no WAF resources; prod plan shows WebACL stub
+- [x] Added 3 Checkov skip rules with justifications (CKV2_AWS_31, CKV_AWS_175, CKV_AWS_192 — all addressed in Sprint 15)
 
 **Definition of done:** WAF module exists; dev plan clean; prod plan shows WebACL resource.
 
