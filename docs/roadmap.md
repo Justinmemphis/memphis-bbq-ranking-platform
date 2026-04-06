@@ -257,14 +257,17 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Monday 2026-04-06 (Sprint 15 — WAF rules + rate limit — short)
+### Monday 2026-04-06 (Sprint 15 — WAF rules + rate limit — short) ✓
 
 **Goal:** Add AWS managed rule groups and a per-IP rate limit rule to the WAF module.
 
-- [ ] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
-- [ ] Rate limit rule: 1000 requests / 5 minutes per IP (abuse control on rating submissions)
-- [ ] Associate WebACL with API Gateway stage when `enable_waf = true`
-- [ ] `terraform plan` for prod shows all rules and association; dev plan still clean
+- [x] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
+- [x] Rate limit rule: 1000 requests / 5 minutes per IP (abuse control on rating submissions)
+- [x] Associate WebACL with API Gateway stage when `enable_waf = true`
+- [x] WAF CloudWatch logging added (`aws-waf-logs-bbq-prod`); resolves CKV2_AWS_31
+- [x] Full prod infra wired (all Lambda, Cognito, DynamoDB, API, Alarms); log retention 90 days
+- [x] 3 checkov skips removed (CKV_AWS_175, CKV_AWS_192, CKV2_AWS_31) — checks now pass natively
+- [x] Prod plan: 64 to add, 0 to change, 0 to destroy; dev plan: 0 WAF resources
 
 **Definition of done:** Prod plan shows full WAF WebACL with managed rules and rate limit; dev unaffected.
 
