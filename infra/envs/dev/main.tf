@@ -297,6 +297,11 @@ module "waf" {
   app_name    = var.app_name
   environment = var.environment
   enable_waf  = var.enable_waf
+  # enable_waf = false in dev so no WAF resources are created here.
+  # api_gateway_stage_arn is wired so the module call is complete and mirrors prod,
+  # but the association resource is also gated on enable_waf — so this is a no-op for dev.
+  api_gateway_stage_arn = module.api.stage_arn
+  log_retention_days    = 14
 }
 
 output "alarms_sns_topic_arn" {
