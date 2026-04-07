@@ -59,6 +59,48 @@ jobs:
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
 
+  plan-prod:
+    name: Plan (prod)
+    # Mirrors plan-dev but targets infra/envs/prod.
+    # Runs on PRs and manual dispatches so prod changes are visible before merge.
+    # Uses the 'prod' GitHub environment — secrets must be set there separately.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: "~1.5"
+
+      - name: Terraform Init
+        working-directory: infra/envs/prod
+        run: terraform init
+
+      - name: Terraform Format Check
+        working-directory: infra/envs/prod
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: infra/envs/prod
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: infra/envs/prod
+        run: terraform plan -no-color
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
   checkov:
     name: IaC Security Scan (checkov)
     runs-on: ubuntu-latest
@@ -130,6 +172,44 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra/envs/dev
+        run: terraform apply -auto-approve -no-color
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+  apply-prod:
+    name: Apply (prod)
+    # Mirrors apply-dev but targets infra/envs/prod.
+    # Runs after a PR is merged to main — same CI-only apply model as dev.
+    # Uses the 'prod' GitHub environment which requires AWS_OIDC_ROLE_ARN and
+    # ALARM_NOTIFICATION_EMAIL secrets to be set in GitHub → Settings → Environments.
+    # Security: the same OIDC role is used for both environments; trust is scoped
+    # to this repo (not per-environment). Prod is protected by the 'prod' GitHub
+    # environment configuration (can add required reviewers or deployment gates there).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: "~1.5"
+
+      - name: Terraform Init
+        working-directory: infra/envs/prod
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/envs/prod
         run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
