@@ -90,7 +90,7 @@ resource "aws_iam_role_policy" "lambda_logs" {
 # An empty string means no resource is created — avoids a Terraform error
 # from registering an invalid policy document.
 resource "aws_iam_role_policy" "additional" {
-  count  = var.additional_policy_json != "" ? 1 : 0
+  count  = var.create_additional_policy ? 1 : 0
   name   = "${local.full_name}-additional"
   role   = aws_iam_role.lambda.id
   policy = var.additional_policy_json

@@ -162,13 +162,15 @@ Observability:
 All infrastructure is scaffolded and validated in dev first. When ready to flip to prod:
 
 - [x] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
-- [ ] **Checkov skips documented:** Add remaining skip rules to `.github/workflows/terraform.yml` `skip_check` with written justifications: `CKV_AWS_26` (SNS KMS — Phase 3), `CKV_AWS_50` (X-Ray — Phase 4), `CKV_AWS_117` (Lambda VPC — intentional no-VPC architecture), `CKV_AWS_119` (DynamoDB KMS CMK — Phase 3), `CKV_AWS_158` (CloudWatch KMS — Phase 3), `CKV_AWS_173` (Lambda env KMS — env vars are table names only), `CKV_AWS_338` (log retention < 1 year — dev 14d/prod 60-90d by design)
-- [x] GitHub Actions: `terraform apply` on merge to main wired for dev (ADR 0002) — prod apply job still needs to be scoped to `infra/envs/prod/`
-- [ ] OIDC role: audit and expand permissions for prod apply (dev apply permissions already in place)
-- [ ] WAF WebACL: `enable_waf = true` in `infra/envs/prod/terraform.tfvars`
-- [ ] Cognito prod User Pool: verify domain prefix, client settings, and callback URLs
-- [ ] Review all prod `terraform.tfvars` values — no dev defaults slipping through
-- [ ] Run `terraform plan` against prod and review line-by-line before first apply
+- [x] **Checkov skips documented:** All 7 required skips are in `.github/workflows/terraform.yml` with written justifications (plus 4 additional: CKV_AWS_115, CKV_AWS_116, CKV_AWS_272, CKV2_AWS_29).
+- [x] GitHub Actions: `terraform apply` on merge to main wired for dev and prod (Sprint 18 — `plan-prod` + `apply-prod` jobs added; `prod` GitHub environment created).
+- [x] OIDC role: WAF permissions added (Sprint 18) — `wafv2:*`, `logs:PutResourcePolicy`, WAF log group pattern. **Requires manual `terraform apply` in `infra/github-oidc/` before prod CI can succeed.**
+- [x] WAF WebACL: `enable_waf = true` confirmed in `infra/envs/prod/terraform.tfvars`.
+- [ ] Cognito prod User Pool: verify domain prefix (`bbq-ranking-prod`) is globally available — confirmed by `terraform plan` output.
+- [x] Review all prod `terraform.tfvars` values — clean; no dev defaults; email via env var.
+- [ ] **Prod GitHub environment secrets:** Set `AWS_OIDC_ROLE_ARN` and `ALARM_NOTIFICATION_EMAIL` in GitHub → Settings → Environments → prod (same role ARN as dev environment).
+- [ ] **Apply OIDC role expansion locally:** `cd infra/github-oidc && terraform init && terraform apply` — must run before prod CI jobs can assume WAF permissions.
+- [ ] Run `terraform plan` against prod and review line-by-line before first apply.
 - [ ] Tag first prod release: `v0.1.0`
 
 **Deployment model:**
@@ -296,14 +298,16 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Thursday 2026-04-09 (Sprint 18 — Pre-prod checklist review — short)
+### Thursday 2026-04-09 (Sprint 18 — Pre-prod checklist review — short) ✓
 
 **Goal:** Audit the pre-prod checklist and prod tfvars before any prod apply.
 
-- [ ] Review full pre-prod checklist line-by-line; mark completed items, identify gaps
-- [ ] Verify `infra/envs/prod/terraform.tfvars` — confirm no dev defaults slipping through
-- [ ] Run `terraform plan` against prod and review output line-by-line
-- [ ] Document any remaining blockers before prod is live
+- [x] Review full pre-prod checklist line-by-line; mark completed items, identify gaps
+- [x] Verify `infra/envs/prod/terraform.tfvars` — confirmed clean; no dev defaults slipping through
+- [x] Add `plan-prod` + `apply-prod` jobs to CI; create `prod` GitHub environment
+- [x] Expand OIDC role with WAF + CloudWatch resource policy permissions (Sprint 15 gap)
+- [ ] Run `terraform plan` against prod and review output line-by-line — blocked on: (1) apply `infra/github-oidc/` for OIDC permissions, (2) set prod environment secrets in GitHub
+- [ ] Document any remaining blockers — see updated pre-prod checklist above
 
 **Definition of done:** Pre-prod checklist updated; prod plan reviewed and no surprises.
 

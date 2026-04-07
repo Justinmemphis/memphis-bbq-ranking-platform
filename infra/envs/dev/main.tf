@@ -77,6 +77,7 @@ module "lambda_get_restaurants" {
   # Least-privilege: only Scan on the restaurants table.
   # Scan is used (vs Query) because there's no GSI to filter by — all restaurants
   # are returned. If a search/filter feature is added, a GSI + Query replaces this.
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -117,6 +118,7 @@ module "lambda_submit_rating" {
     LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -185,6 +187,7 @@ module "lambda_get_leaderboard" {
     LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -215,6 +218,7 @@ module "lambda_get_restaurant_detail" {
     RESTAURANTS_TABLE = module.dynamodb.restaurants_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [

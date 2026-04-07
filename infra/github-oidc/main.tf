@@ -324,6 +324,68 @@ resource "aws_iam_role_policy" "github_actions" {
         ]
         Resource = "arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:bbq-*"
       },
+      # --- WAF v2 WebACL (Sprint 15 — prod-only) ---
+      # Required for aws_wafv2_web_acl, aws_wafv2_web_acl_logging_configuration,
+      # and aws_wafv2_web_acl_association resources.
+      # Resource ARN format: arn:aws:wafv2:region:account:regional/webacl/name/id
+      # The trailing /* covers the generated ID segment (unknown at plan time).
+      # Scoped to bbq-prefixed WebACLs in us-east-1 only.
+      {
+        Sid    = "WAFWebACL"
+        Effect = "Allow"
+        Action = [
+          "wafv2:CreateWebACL",
+          "wafv2:DeleteWebACL",
+          "wafv2:GetWebACL",
+          "wafv2:UpdateWebACL",
+          "wafv2:AssociateWebACL",
+          "wafv2:DisassociateWebACL",
+          "wafv2:GetWebACLForResource",
+          "wafv2:PutLoggingConfiguration",
+          "wafv2:GetLoggingConfiguration",
+          "wafv2:DeleteLoggingConfiguration",
+          "wafv2:ListTagsForResource",
+          "wafv2:TagResource",
+          "wafv2:UntagResource",
+        ]
+        Resource = "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/webacl/bbq-*/*"
+      },
+      # --- CloudWatch log resource policy (Sprint 15 — WAF logging) ---
+      # aws_cloudwatch_log_resource_policy (used to grant WAF delivery.logs access)
+      # requires PutResourcePolicy/DeleteResourcePolicy.
+      # AWS does not support resource-level ARN scoping for these actions —
+      # Resource = "*" is an AWS service limitation, not a policy choice.
+      # DescribeResourcePolicies is needed by Terraform to read current policy state.
+      {
+        Sid    = "CloudWatchLogResourcePolicy"
+        Effect = "Allow"
+        Action = [
+          "logs:PutResourcePolicy",
+          "logs:DeleteResourcePolicy",
+          "logs:DescribeResourcePolicies",
+        ]
+        Resource = "*"
+      },
+      # --- CloudWatch Logs: WAF log group (Sprint 15) ---
+      # WAF log group name must start with 'aws-waf-logs-' (AWS requirement).
+      # This pattern is separate from Lambda/API Gateway log groups above.
+      {
+        Sid    = "CloudWatchLogsWAF"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DeleteLogGroup",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteRetentionPolicy",
+          "logs:ListTagsForResource",
+          "logs:ListTagsLogGroup",
+          "logs:TagLogGroup",
+          "logs:UntagLogGroup",
+          "logs:TagResource",
+          "logs:UntagResource",
+        ]
+        Resource = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:aws-waf-logs-bbq-*"
+      },
     ]
   })
 }

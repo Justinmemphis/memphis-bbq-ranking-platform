@@ -68,6 +68,7 @@ module "lambda_get_restaurants" {
     RESTAURANTS_TABLE = module.dynamodb.restaurants_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -101,6 +102,7 @@ module "lambda_submit_rating" {
     LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -160,6 +162,7 @@ module "lambda_get_leaderboard" {
     LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -190,6 +193,7 @@ module "lambda_get_restaurant_detail" {
     RESTAURANTS_TABLE = module.dynamodb.restaurants_table_name
   }
 
+  create_additional_policy = true
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
