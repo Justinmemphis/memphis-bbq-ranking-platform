@@ -38,13 +38,18 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 
 | Service | Added/Changed | Monthly Cost |
 |---|---|---|
-| **AWS WAF** | 1 Web ACL on CloudFront; AWS Managed Rule Groups (free); ~3K requests/month | **~$5.00/month** (Web ACL: $5/month; requests negligible at this volume) |
+| **AWS WAF WebACL** | 1 WebACL, REGIONAL scope (API Gateway); prod only | **$5.00/month** (flat fee per WebACL) |
+| **AWS WAF — Managed Rule Groups** | AWSManagedRulesCommonRuleSet + AWSManagedRulesKnownBadInputsRuleSet | **$0.00** (AWS Managed Rules are free) |
+| **AWS WAF — Requests** | ~3K requests/month evaluated by WAF | **~$0.00** ($0.60/1M requests; negligible at this volume) |
+| **CloudWatch Logs — WAF** | WAF sampled request logs; `aws-waf-logs-bbq-prod`; 90-day retention | **~$0.01–0.05/month** (very low volume; same $0.50/GB rate as other log groups) |
 | ~~**Secrets Manager**~~ | Not used — decided | $0.00 — SSM Parameter Store Standard used for all secrets |
 
-**Phase 3 estimated addition: ~$5.00/month**
-**Phase 3 cumulative total: ~$5.50–6.00/month**
+**Phase 3 estimated addition: ~$5.05/month**
+**Phase 3 cumulative total: ~$5.55–6.05/month**
 
 > WAF is the first meaningful cost in this architecture. Prod only — decided.
+> WAF scope is REGIONAL (attaches to API Gateway HTTP API stage), not CLOUDFRONT.
+> CloudFront-scoped WAF would require a separate us-east-1 provider stack — not used here.
 
 > **Recommendation:** Use SSM Parameter Store Standard (no per-parameter charge) for all secrets unless automatic rotation is required. Secrets Manager adds $0.40/secret/month and is justified only when rotation is needed.
 
@@ -94,7 +99,7 @@ For services that charge per resource (not per request), running both dev and pr
 
 | Service | Dev | Prod | Notes |
 |---|---|---|---|
-| WAF Web ACL | not deployed | $5/month | Prod only — decided |
+| WAF WebACL (REGIONAL / API Gateway) | not deployed | $5/month | Prod only — decided |
 | GuardDuty | not deployed | $1–3/month | Prod only — decided |
 | CloudWatch Alarms | ~$0.30/month | ~$0.30/month | Small; acceptable to run in both |
 | Everything else | ~$0 | ~$0 | Request-based; negligible at this volume |
