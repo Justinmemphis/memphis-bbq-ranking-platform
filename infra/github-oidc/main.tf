@@ -327,9 +327,13 @@ resource "aws_iam_role_policy" "github_actions" {
       # --- WAF v2 WebACL (Sprint 15 — prod-only) ---
       # Required for aws_wafv2_web_acl, aws_wafv2_web_acl_logging_configuration,
       # and aws_wafv2_web_acl_association resources.
-      # Resource ARN format: arn:aws:wafv2:region:account:regional/webacl/name/id
-      # The trailing /* covers the generated ID segment (unknown at plan time).
-      # Scoped to bbq-prefixed WebACLs in us-east-1 only.
+      #
+      # Two resource ARNs are required:
+      # 1. The WebACL itself: regional/webacl/bbq-*/ID
+      # 2. Managed rule sets: regional/managedruleset/*/* — AWS checks this when
+      #    CreateWebACL references managed rule groups (AWSManagedRulesCommonRuleSet
+      #    etc.). The account ID in the ARN is the *caller's* account even though the
+      #    rule groups are AWS-managed — this is an AWS IAM evaluation quirk.
       {
         Sid    = "WAFWebACL"
         Effect = "Allow"
@@ -348,7 +352,10 @@ resource "aws_iam_role_policy" "github_actions" {
           "wafv2:TagResource",
           "wafv2:UntagResource",
         ]
-        Resource = "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/webacl/bbq-*/*"
+        Resource = [
+          "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/webacl/bbq-*/*",
+          "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/managedruleset/*/*",
+        ]
       },
       # --- CloudWatch log resource policy (Sprint 15 — WAF logging) ---
       # aws_cloudwatch_log_resource_policy (used to grant WAF delivery.logs access)
@@ -363,6 +370,26 @@ resource "aws_iam_role_policy" "github_actions" {
           "logs:PutResourcePolicy",
           "logs:DeleteResourcePolicy",
           "logs:DescribeResourcePolicies",
+        ]
+        Resource = "*"
+      },
+      # --- CloudWatch log delivery (Sprint 18 — API Gateway + WAF access logging) ---
+      # Required when Terraform creates a new API Gateway v2 stage with access
+      # logging enabled (aws_apigatewayv2_stage). AWS calls CreateLogDelivery
+      # on behalf of the caller during stage creation.
+      # Dev never needed this because its stage was created before CI-only apply;
+      # prod is a fresh create that triggers CreateStage for the first time.
+      # Also used by WAF logging configuration as a secondary delivery mechanism.
+      # Resource = "*" is required — AWS does not support ARN scoping for delivery actions.
+      {
+        Sid    = "CloudWatchLogDelivery"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
         ]
         Resource = "*"
       },
