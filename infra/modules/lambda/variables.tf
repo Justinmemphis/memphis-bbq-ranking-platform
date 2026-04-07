@@ -42,6 +42,17 @@ variable "log_retention_days" {
   default     = 14
 }
 
+variable "create_additional_policy" {
+  description = <<-EOT
+    Set to true when additional_policy_json is provided. Controls whether the
+    inline IAM policy resource is created. Must be a static literal (true/false)
+    at the call site — cannot be derived from computed values such as resource ARNs,
+    because Terraform evaluates count at plan time before any resources exist.
+  EOT
+  type        = bool
+  default     = false
+}
+
 variable "additional_policy_json" {
   description = <<-EOT
     Optional JSON IAM policy document to attach to the Lambda execution role as an
