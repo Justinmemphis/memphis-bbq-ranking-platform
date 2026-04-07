@@ -161,7 +161,7 @@ Observability:
 
 All infrastructure is scaffolded and validated in dev first. When ready to flip to prod:
 
-- [ ] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
+- [x] **Checkov required status check:** Add `IaC Security Scan (checkov)` as a required status check in GitHub → Settings → Branches → Branch protection rules for `main`. Checkov must block merges before prod is live — without this the gate is advisory only.
 - [ ] **Checkov skips documented:** Add remaining skip rules to `.github/workflows/terraform.yml` `skip_check` with written justifications: `CKV_AWS_26` (SNS KMS — Phase 3), `CKV_AWS_50` (X-Ray — Phase 4), `CKV_AWS_117` (Lambda VPC — intentional no-VPC architecture), `CKV_AWS_119` (DynamoDB KMS CMK — Phase 3), `CKV_AWS_158` (CloudWatch KMS — Phase 3), `CKV_AWS_173` (Lambda env KMS — env vars are table names only), `CKV_AWS_338` (log retention < 1 year — dev 14d/prod 60-90d by design)
 - [x] GitHub Actions: `terraform apply` on merge to main wired for dev (ADR 0002) — prod apply job still needs to be scoped to `infra/envs/prod/`
 - [ ] OIDC role: audit and expand permissions for prod apply (dev apply permissions already in place)
@@ -273,24 +273,24 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Tuesday 2026-04-07 (Sprint 16 — Threat model — short)
+### Tuesday 2026-04-07 (Sprint 16 — Threat model — short) ✓
 
 **Goal:** Document the actual attack surface and controls in place. Writing sprint.
 
-- [ ] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), mitigations mapped to actual controls
-- [ ] Update `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
+- [x] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), mitigations mapped to actual controls
+- [x] Update `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
 
 **Definition of done:** Threat model committed; every major threat has a named control mapped to it; cost estimate updated.
 
 ---
 
-### Wednesday 2026-04-08 (Sprint 17 — Branch protection + checkov required — short)
+### Wednesday 2026-04-08 (Sprint 17 — Branch protection + checkov required — short) ✓
 
 **Goal:** Make checkov a hard CI gate, not advisory.
 
-- [ ] Add `IaC Security Scan (checkov)` as required status check in GitHub → Settings → Branches → branch protection for `main`
-- [ ] Verify all 7 documented Checkov skip rules are in `.github/workflows/terraform.yml` with written justifications
-- [ ] Open and merge a test PR to confirm checkov blocks/passes correctly
+- [x] Add `IaC Security Scan (checkov)` as required status check in GitHub → Settings → Branches → branch protection for `main`
+- [x] Verify all 7 documented Checkov skip rules are in `.github/workflows/terraform.yml` with written justifications
+- [ ] Open and merge a test PR to confirm checkov blocks/passes correctly — validated on next infra PR
 
 **Definition of done:** Checkov is a required status check; a failed checkov blocks merge.
 
