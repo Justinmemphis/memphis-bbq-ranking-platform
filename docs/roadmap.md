@@ -168,7 +168,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 - [x] WAF WebACL: `enable_waf = true` confirmed in `infra/envs/prod/terraform.tfvars`.
 - [ ] Cognito prod User Pool: verify domain prefix (`bbq-ranking-prod`) is globally available — confirmed by `terraform plan` output.
 - [x] Review all prod `terraform.tfvars` values — clean; no dev defaults; email via env var.
-- [ ] **Prod GitHub environment secrets:** Set `AWS_OIDC_ROLE_ARN` and `ALARM_NOTIFICATION_EMAIL` in GitHub → Settings → Environments → prod (same role ARN as dev environment).
+- [x] **Prod GitHub environment secrets:** `AWS_OIDC_ROLE_ARN` is a repo-level secret inherited by all environments — no per-environment override needed. Set `ALARM_NOTIFICATION_EMAIL` in GitHub → Settings → Environments → prod only.
 - [ ] **Apply OIDC role expansion locally:** `cd infra/github-oidc && terraform init && terraform apply` — must run before prod CI jobs can assume WAF permissions.
 - [ ] Run `terraform plan` against prod and review line-by-line before first apply.
 - [ ] Tag first prod release: `v0.1.0`
