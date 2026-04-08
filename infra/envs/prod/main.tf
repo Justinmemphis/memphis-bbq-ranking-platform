@@ -20,13 +20,6 @@ provider "aws" {
   }
 }
 
-# Used to construct WAF-compatible API Gateway stage ARN.
-# The aws_apigatewayv2_stage.arn attribute omits the account ID segment, which
-# WAF's AssociateWebACL rejects. We build the ARN manually with the account ID
-# injected so WAF accepts it. No alternatives: the Terraform attribute is wrong
-# for this use case and there is no provider workaround.
-data "aws_caller_identity" "current" {}
-
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   app_name    = var.app_name
@@ -274,20 +267,18 @@ module "alarms" {
 }
 
 # --- WAF WebACL ---
-# Prod has enable_waf = true — WebACL protects the API Gateway stage.
+# --- WAF WebACL ---
+# Prod has enable_waf = true — WebACL, managed rules, and rate limit are provisioned.
+# Association with the API is deferred to Sprint 20 via CloudFront — HTTP APIs
+# are not a supported WAFv2 association target (only REST APIs / v1 are supported).
 # Rules: AWSManagedRulesCommonRuleSet + AWSManagedRulesKnownBadInputsRuleSet + per-IP rate limit.
-# Association: WebACL is linked to the API Gateway $default stage via stage_arn.
 # Log retention: 90 days (prod standard).
 module "waf" {
-  source      = "../../modules/waf"
-  app_name    = var.app_name
-  environment = var.environment
-  enable_waf  = var.enable_waf
-
-  # WAF requires the account ID in the stage ARN; the Terraform attribute omits it.
-  # Construct the correct ARN explicitly using the known account ID and api_id.
-  api_gateway_stage_arn = "arn:aws:apigateway:${var.region}:${data.aws_caller_identity.current.account_id}:/apis/${module.api.api_id}/stages/$default"
-  log_retention_days    = 90
+  source             = "../../modules/waf"
+  app_name           = var.app_name
+  environment        = var.environment
+  enable_waf         = var.enable_waf
+  log_retention_days = 90
 }
 
 output "api_endpoint" {
