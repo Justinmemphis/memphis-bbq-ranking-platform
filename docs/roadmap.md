@@ -286,49 +286,51 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Wednesday 2026-04-08 (Sprint 17 — Branch protection + checkov required — short) ✓
+### Wednesday 2026-04-08 (Sprint 17 + housekeeping) ✓
 
-**Goal:** Make checkov a hard CI gate, not advisory.
+**Goal:** Make checkov a hard CI gate; fix prod apply blockers from Sprint 18.
 
-- [x] Add `IaC Security Scan (checkov)` as required status check in GitHub → Settings → Branches → branch protection for `main`
-- [x] Verify all 7 documented Checkov skip rules are in `.github/workflows/terraform.yml` with written justifications
-- [ ] Open and merge a test PR to confirm checkov blocks/passes correctly — validated on next infra PR
+- [x] Add `IaC Security Scan (checkov)` as required status check in GitHub branch protection
+- [x] Fix WAF WebACL association — HTTP APIs not supported by WAFv2 `AssociateWebACL`; removed association resource; WAF re-association deferred to Sprint 20 via CloudFront (PR #29)
+- [x] Reorganize `terraform.yml` — dev/prod grouped, checkov now needs both plans, `.github/workflows/**` added to path triggers (PR #30)
+- [x] Re-add CKV2_AWS_31 checkov skip — checkov version regression on count expression correlation
+- [x] Prod apply clean end-to-end after PRs #28, #29, #30 merged
 
-**Definition of done:** Checkov is a required status check; a failed checkov blocks merge.
-
----
-
-### Thursday 2026-04-09 (Sprint 18 — Pre-prod checklist review — short) ✓
-
-**Goal:** Audit the pre-prod checklist and prod tfvars before any prod apply.
-
-- [x] Review full pre-prod checklist line-by-line; mark completed items, identify gaps
-- [x] Verify `infra/envs/prod/terraform.tfvars` — confirmed clean; no dev defaults slipping through
-- [x] Add `plan-prod` + `apply-prod` jobs to CI; create `prod` GitHub environment
-- [x] Expand OIDC role with WAF + CloudWatch resource policy permissions (Sprint 15 gap)
-- [ ] Run `terraform plan` against prod and review output line-by-line — blocked on: (1) apply `infra/github-oidc/` for OIDC permissions, (2) set prod environment secrets in GitHub
-- [ ] Document any remaining blockers — see updated pre-prod checklist above
-
-**Definition of done:** Pre-prod checklist updated; prod plan reviewed and no surprises.
+**Definition of done:** Prod apply succeeds; checkov is a required status check; CI triggers on workflow changes. ✓ COMPLETE
 
 ---
 
-### Friday 2026-04-10 (Sprint 19 — Secrets in SSM Parameter Store — short)
+### Thursday 2026-04-10 (Sprint 19 — SSM audit + spike alarm — 45 min)
 
-**Goal:** Move any plaintext config out of Lambda env vars and into SSM. No secrets in code or tfvars.
+**Goal:** Confirm no plaintext secrets in Lambda env vars; add rating submission spike alarm.
 
-- [ ] Identify all plaintext config currently passed as Lambda env vars (table names are fine; anything credential-like is not)
-- [ ] Add SSM Parameter Store resources in Terraform for any true secrets
-- [ ] Update Lambda IAM roles with least-privilege `ssm:GetParameter` permissions
-- [ ] Verify Lambda can read secrets at runtime; no plaintext secrets remain in Terraform or env vars
+- [ ] Audit all Lambda `environment_vars` — confirm only table names and non-sensitive config (no credentials, tokens, or keys)
+- [ ] Document the decision: if nothing to move, record why SSM is not needed yet and when it would be
+- [ ] Add CloudWatch alarm on `POST /v1/ratings` invocation count spike (abuse signal)
 
-**Definition of done:** All secrets are in SSM; Lambda IAM grants only the params it needs; no plaintext secrets in code.
+**Definition of done:** SSM decision documented; spike alarm deployed to dev.
 
 ---
 
-### Sunday 2026-04-12 (Deep work — Week 7 kickoff)
+### Friday 2026-04-11 (Sprint 20 — Structured logging audit — 45 min)
 
-**Goal:** Long session to open Week 7. Candidate topics: Admin Cognito group + admin route guard, Admin UI scaffold (S3 + CloudFront), or structured logging audit — pick one based on energy and priority.
+**Goal:** Verify all Lambda handlers emit structured JSON logs matching the spec.
+
+Log spec: `level`, `message`, `requestId`, `userSub`, `route`, `statusCode`, `latencyMs`, `restaurantId` (where applicable) — no PII.
+
+- [ ] Review each Lambda handler (`health`, `get_restaurants`, `get_restaurant_detail`, `get_leaderboard`, `submit_rating`)
+- [ ] Fix any missing fields or non-JSON log output
+- [ ] Confirm `requestId` comes from `event["requestContext"]["requestId"]` (not Lambda context)
+
+**Definition of done:** All 5 handlers emit spec-compliant structured JSON logs.
+
+---
+
+### Sunday 2026-04-13 (Deep work — Week 7 kickoff)
+
+**Goal:** Long session. Priority order:
+1. CloudFront + WAF (Sprint 21) — CloudFront in front of HTTP API; WAF re-scoped to `CLOUDFRONT`; S3 static site bundled in; unblocks WAF actually protecting traffic
+2. Admin Cognito group + server-side route guard (Sprint 22) — if time remains after CloudFront
 
 ---
 
