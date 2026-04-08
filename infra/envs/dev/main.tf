@@ -20,6 +20,11 @@ provider "aws" {
   }
 }
 
+# Used to construct a WAF-compatible API Gateway stage ARN (account ID required).
+# Mirrors the prod env; WAF is disabled in dev so this data source is unused at
+# plan/apply time, but the module call structure is kept consistent.
+data "aws_caller_identity" "current" {}
+
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   app_name    = var.app_name
@@ -304,7 +309,10 @@ module "waf" {
   # enable_waf = false in dev so no WAF resources are created here.
   # api_gateway_stage_arn is wired so the module call is complete and mirrors prod,
   # but the association resource is also gated on enable_waf — so this is a no-op for dev.
-  api_gateway_stage_arn = module.api.stage_arn
+  # Matches prod ARN construction — WAF requires account ID in the stage ARN.
+  # WAF is disabled in dev (enable_waf = false) so this ARN is never evaluated,
+  # but keeping the pattern consistent avoids drift between envs.
+  api_gateway_stage_arn = "arn:aws:apigateway:${var.region}:${data.aws_caller_identity.current.account_id}:/apis/${module.api.api_id}/stages/$default"
   log_retention_days    = 14
 }
 
