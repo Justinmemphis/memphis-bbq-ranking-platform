@@ -20,11 +20,6 @@ provider "aws" {
   }
 }
 
-# Used to construct a WAF-compatible API Gateway stage ARN (account ID required).
-# Mirrors the prod env; WAF is disabled in dev so this data source is unused at
-# plan/apply time, but the module call structure is kept consistent.
-data "aws_caller_identity" "current" {}
-
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   app_name    = var.app_name
@@ -298,22 +293,15 @@ module "alarms" {
 
 # --- WAF WebACL ---
 # Dev intentionally has enable_waf = false — WAF costs ~$5/month regardless of traffic.
-# The module call exists here so the same Terraform structure applies to both envs;
-# only prod sets enable_waf = true (in terraform.tfvars).
-# Association with API Gateway is wired in Sprint 15 once the rules are also in place.
+# Module call mirrors prod structure; no resources are created when enable_waf = false.
+# WAF association with the API is deferred to Sprint 20 via CloudFront — HTTP APIs
+# are not a supported WAFv2 association target.
 module "waf" {
-  source      = "../../modules/waf"
-  app_name    = var.app_name
-  environment = var.environment
-  enable_waf  = var.enable_waf
-  # enable_waf = false in dev so no WAF resources are created here.
-  # api_gateway_stage_arn is wired so the module call is complete and mirrors prod,
-  # but the association resource is also gated on enable_waf — so this is a no-op for dev.
-  # Matches prod ARN construction — WAF requires account ID in the stage ARN.
-  # WAF is disabled in dev (enable_waf = false) so this ARN is never evaluated,
-  # but keeping the pattern consistent avoids drift between envs.
-  api_gateway_stage_arn = "arn:aws:apigateway:${var.region}:${data.aws_caller_identity.current.account_id}:/apis/${module.api.api_id}/stages/$default"
-  log_retention_days    = 14
+  source             = "../../modules/waf"
+  app_name           = var.app_name
+  environment        = var.environment
+  enable_waf         = var.enable_waf
+  log_retention_days = 14
 }
 
 output "alarms_sns_topic_arn" {
