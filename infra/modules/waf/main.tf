@@ -1,11 +1,19 @@
-# WAF WebACL — prod-only edge protection for the API Gateway HTTP API.
+# WAF WebACL — prod-only edge protection.
 #
 # Why prod-only: AWS WAF WebACL costs ~$5/month in base fees regardless of traffic.
 # Dev runs without WAF intentionally — that tradeoff is documented in terraform.tfvars.
 #
-# Scope = REGIONAL: attaches to API Gateway, ALBs, and AppSync.
-# CLOUDFRONT scope requires a separate us-east-1 provider and is used for CloudFront
-# distributions only — not needed here since the API is accessed directly.
+# Scope = REGIONAL: required for API Gateway, ALBs, and AppSync associations.
+#
+# Association status: the WebACL and rules are provisioned but NOT yet associated
+# with any resource. AWS WAF does not support direct association with HTTP API
+# (API Gateway v2) stages — it only supports REST API (v1) stages. The /apis/
+# ARN format used by HTTP APIs is rejected by AssociateWebACL with
+# WAFInvalidParameterException regardless of ARN construction.
+#
+# Planned fix (Sprint 20): add a CloudFront distribution in front of the HTTP API.
+# WAF will be re-scoped to CLOUDFRONT and associated with that distribution.
+# The WebACL rules defined here will be reused; only scope and association change.
 #
 # Security design: default_action = allow. Rules define what to BLOCK.
 # Alternative (default block + allowlist) was rejected: too brittle for an API that
@@ -201,30 +209,10 @@ resource "aws_wafv2_web_acl_logging_configuration" "main" {
   depends_on = [aws_cloudwatch_log_resource_policy.waf]
 }
 
-# --- WAF WebACL association with API Gateway stage ---
-# Associates the WebACL with the API Gateway $default stage so every request
-# to the API is evaluated by WAF before reaching Lambda.
+# --- WAF WebACL association ---
+# DEFERRED: AWS WAF does not support associating with HTTP API (v2) stages.
+# The aws_wafv2_web_acl_association resource is intentionally absent.
 #
-# resource_arn format for HTTP API stage:
-#   arn:aws:apigateway:{region}::/apis/{api-id}/stages/{stage-name}
-# This ARN is output by the api_http module as 'stage_arn'.
-#
-# Gated on api_gateway_stage_arn being non-null so the WAF module can exist
-# in a Terraform config before the API Gateway is wired (e.g., initial scaffold).
-# Once the API module is present in the env, pass its stage_arn here.
-resource "aws_wafv2_web_acl_association" "main" {
-  # count = var.enable_waf only — the null-check on api_gateway_stage_arn cannot be
-  # used here because the stage_arn is "known after apply" (the API Gateway stage
-  # doesn't exist yet at plan time). Terraform requires count to be deterministic at
-  # plan time. The lifecycle precondition below catches the misconfiguration case.
-  count        = var.enable_waf ? 1 : 0
-  resource_arn = var.api_gateway_stage_arn
-  web_acl_arn  = aws_wafv2_web_acl.main[0].arn
-
-  lifecycle {
-    precondition {
-      condition     = var.api_gateway_stage_arn != null
-      error_message = "api_gateway_stage_arn must be set when enable_waf = true."
-    }
-  }
-}
+# Sprint 20 will add a CloudFront distribution in front of the API. At that point
+# this module will be updated to scope = CLOUDFRONT and the association will target
+# the CloudFront distribution ARN instead. The rules above require no changes.
