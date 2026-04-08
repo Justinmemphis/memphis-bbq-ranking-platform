@@ -5,22 +5,28 @@ on:
     branches: [main]
     paths:
       - "infra/**"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
       - "infra/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
-  id-token: write       # required for OIDC token exchange
+  id-token: write        # required for OIDC token exchange
   contents: read
-  pull-requests: write  # to post plan output as a PR comment
+  pull-requests: write   # to post plan output as a PR comment
   security-events: write # required for checkov SARIF upload to GitHub Security tab
 
 jobs:
+
+  # ---------------------------------------------------------------------------
+  # Dev
+  # ---------------------------------------------------------------------------
+
   plan-dev:
     name: Plan (dev)
-    # Run on PRs and manual dispatches only — apply job handles push-to-main.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
@@ -34,7 +40,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: us-east-1
-          # No static keys — OIDC trust is scoped to this repo and environment
+          # No static keys — OIDC trust is scoped to this repo
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4.0.0
@@ -59,14 +65,14 @@ jobs:
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
 
-  plan-prod:
-    name: Plan (prod)
-    # Mirrors plan-dev but targets infra/envs/prod.
-    # Runs on PRs and manual dispatches so prod changes are visible before merge.
-    # Uses the 'prod' GitHub environment — secrets must be set there separately.
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+  apply-dev:
+    name: Apply (dev)
+    # Runs only when infra/** changes land on main (i.e. after a PR is merged).
+    # Plan and checkov must have passed on the PR before merge — this job applies
+    # the already-reviewed plan. No manual apply should ever run locally.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: prod
+    environment: dev
 
     steps:
       - name: Checkout
@@ -84,29 +90,26 @@ jobs:
           terraform_version: "~1.5"
 
       - name: Terraform Init
-        working-directory: infra/envs/prod
+        working-directory: infra/envs/dev
         run: terraform init
 
-      - name: Terraform Format Check
-        working-directory: infra/envs/prod
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Validate
-        working-directory: infra/envs/prod
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: infra/envs/prod
-        run: terraform plan -no-color
+      - name: Terraform Apply
+        working-directory: infra/envs/dev
+        run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
 
+  # ---------------------------------------------------------------------------
+  # IaC Security Scan
+  # Scans all of infra/ statically — no AWS credentials required.
+  # Depends on both plans so it only runs after both environments are validated.
+  # ---------------------------------------------------------------------------
+
   checkov:
     name: IaC Security Scan (checkov)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # Run after plan so we only scan IaC that is syntactically valid.
-    # checkov does NOT require AWS credentials — it analyses static HCL only.
-    needs: plan-dev
+    needs: [plan-dev, plan-prod]
 
     steps:
       - name: Checkout
@@ -145,14 +148,15 @@ jobs:
         with:
           sarif_file: results.sarif
 
-  apply-dev:
-    name: Apply (dev)
-    # Runs only when infra/** changes land on main (i.e. after a PR is merged).
-    # Plan and checkov must have passed on the PR before merge — this job applies
-    # the already-reviewed plan. No manual apply should ever run locally.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # ---------------------------------------------------------------------------
+  # Prod
+  # ---------------------------------------------------------------------------
+
+  plan-prod:
+    name: Plan (prod)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: dev
+    environment: prod
 
     steps:
       - name: Checkout
@@ -170,12 +174,20 @@ jobs:
           terraform_version: "~1.5"
 
       - name: Terraform Init
-        working-directory: infra/envs/dev
+        working-directory: infra/envs/prod
         run: terraform init
 
-      - name: Terraform Apply
-        working-directory: infra/envs/dev
-        run: terraform apply -auto-approve -no-color
+      - name: Terraform Format Check
+        working-directory: infra/envs/prod
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: infra/envs/prod
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: infra/envs/prod
+        run: terraform plan -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
 
@@ -183,11 +195,8 @@ jobs:
     name: Apply (prod)
     # Mirrors apply-dev but targets infra/envs/prod.
     # Runs after a PR is merged to main — same CI-only apply model as dev.
-    # Uses the 'prod' GitHub environment which requires AWS_OIDC_ROLE_ARN and
-    # ALARM_NOTIFICATION_EMAIL secrets to be set in GitHub → Settings → Environments.
-    # Security: the same OIDC role is used for both environments; trust is scoped
-    # to this repo (not per-environment). Prod is protected by the 'prod' GitHub
-    # environment configuration (can add required reviewers or deployment gates there).
+    # Security: OIDC trust is scoped to this repo; prod is protected by the
+    # 'prod' GitHub environment (can add required reviewers or deployment gates).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: prod
