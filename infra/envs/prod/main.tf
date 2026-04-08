@@ -20,6 +20,13 @@ provider "aws" {
   }
 }
 
+# Used to construct WAF-compatible API Gateway stage ARN.
+# The aws_apigatewayv2_stage.arn attribute omits the account ID segment, which
+# WAF's AssociateWebACL rejects. We build the ARN manually with the account ID
+# injected so WAF accepts it. No alternatives: the Terraform attribute is wrong
+# for this use case and there is no provider workaround.
+data "aws_caller_identity" "current" {}
+
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   app_name    = var.app_name
@@ -277,7 +284,9 @@ module "waf" {
   environment = var.environment
   enable_waf  = var.enable_waf
 
-  api_gateway_stage_arn = module.api.stage_arn
+  # WAF requires the account ID in the stage ARN; the Terraform attribute omits it.
+  # Construct the correct ARN explicitly using the known account ID and api_id.
+  api_gateway_stage_arn = "arn:aws:apigateway:${var.region}:${data.aws_caller_identity.current.account_id}:/apis/${module.api.api_id}/stages/$default"
   log_retention_days    = 90
 }
 
