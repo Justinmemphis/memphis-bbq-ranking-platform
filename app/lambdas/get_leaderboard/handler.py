@@ -104,7 +104,7 @@ def handler(event, context):
             "message": "get_leaderboard success",
             "route": ROUTE,
             "userSub": user_sub,
-            "requestId": context.aws_request_id,
+            "requestId": event.get("requestContext", {}).get("requestId"),
             "statusCode": 200,
             "latencyMs": latency_ms,
             "scope": scope,
@@ -128,7 +128,7 @@ def handler(event, context):
             "message": f"get_leaderboard error: {exc}",
             "route": ROUTE,
             "userSub": user_sub,
-            "requestId": context.aws_request_id,
+            "requestId": event.get("requestContext", {}).get("requestId"),
             "statusCode": 500,
             "latencyMs": latency_ms,
         }))

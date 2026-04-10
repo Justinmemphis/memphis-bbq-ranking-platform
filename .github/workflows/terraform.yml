@@ -3,14 +3,17 @@ name: Terraform
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "infra/**"
-      - ".github/workflows/**"
+    # No path filter — plan + checkov must run on every PR to satisfy required
+    # status checks. If only app/** changed, the plan will show 0 infrastructure
+    # changes (state refresh only), which is fast and correct.
   push:
     branches: [main]
     paths:
       - "infra/**"
       - ".github/workflows/**"
+    # Path filter on push only — apply jobs run only when infra actually changes.
+    # App-only merges do not trigger apply (Lambda code is deployed via the zip
+    # created at plan/apply time from the app/ directory).
   workflow_dispatch:
 
 permissions:
