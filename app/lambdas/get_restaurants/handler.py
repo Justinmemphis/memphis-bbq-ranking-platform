@@ -48,7 +48,7 @@ def handler(event, context):
             "message": "get_restaurants success",
             "route": "GET /v1/restaurants",
             "userSub": user_sub,
-            "requestId": context.aws_request_id,
+            "requestId": event.get("requestContext", {}).get("requestId"),
             "statusCode": 200,
             "latencyMs": latency_ms,
             "resultCount": len(restaurants),
@@ -67,7 +67,7 @@ def handler(event, context):
             "message": f"get_restaurants error: {exc}",
             "route": "GET /v1/restaurants",
             "userSub": user_sub,
-            "requestId": context.aws_request_id,
+            "requestId": event.get("requestContext", {}).get("requestId"),
             "statusCode": 500,
             "latencyMs": latency_ms,
         }))
