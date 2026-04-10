@@ -300,13 +300,13 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Thursday 2026-04-10 (Sprint 19 — SSM audit + spike alarm — 45 min)
+### Thursday 2026-04-10 (Sprint 19 — SSM audit + spike alarm — 45 min) ✓
 
 **Goal:** Confirm no plaintext secrets in Lambda env vars; add rating submission spike alarm.
 
-- [ ] Audit all Lambda `environment_vars` — confirm only table names and non-sensitive config (no credentials, tokens, or keys)
-- [ ] Document the decision: if nothing to move, record why SSM is not needed yet and when it would be
-- [ ] Add CloudWatch alarm on `POST /v1/ratings` invocation count spike (abuse signal)
+- [x] Audit all Lambda `environment_vars` — all five functions carry DynamoDB table names only; no credentials, tokens, or keys
+- [x] Document the decision: SSM not needed yet; designated for future secrets (API keys, SMTP, etc.); documented in threat model with trigger conditions
+- [x] Add CloudWatch alarm on `POST /v1/ratings` invocation count spike — dev: 50/5 min, prod: 200/5 min
 
 **Definition of done:** SSM decision documented; spike alarm deployed to dev.
 
