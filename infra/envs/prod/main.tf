@@ -262,8 +262,12 @@ module "alarms" {
     module.lambda_submit_rating.function_name,
   ]
 
-  api_gateway_id     = module.api.api_id
-  notification_email = var.alarm_notification_email
+  api_gateway_id              = module.api.api_id
+  notification_email          = var.alarm_notification_email
+  submit_rating_function_name = module.lambda_submit_rating.function_name
+  # Prod threshold: 200 invocations in 5 min (40/min). Tune upward once a real
+  # traffic baseline exists — start conservative to avoid missing early abuse signals.
+  rating_spike_threshold = 200
 }
 
 # --- WAF WebACL ---

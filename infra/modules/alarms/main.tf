@@ -134,6 +134,45 @@ resource "aws_cloudwatch_metric_alarm" "apigw_latency" {
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
+# --- Rating submission spike alarm ---
+# Metric: Invocations on the submit_rating Lambda.
+# Threshold: var.rating_spike_threshold invocations in a 5-minute window.
+# Intent: detect rating stuffing or bot activity before it meaningfully skews the
+# leaderboard. The per-IP WAF rate limit (prod-only) is the first line; this alarm
+# is the detection signal when WAF is not in front (dev) or when an attacker
+# uses many IPs.
+#
+# Design decisions:
+#   - Uses Invocations (not Errors): an attacker submitting valid ratings won't
+#     trigger the error alarm. We need a volume signal, not a failure signal.
+#   - evaluation_periods = 1: fires on the first 5-min window that exceeds threshold.
+#     We want early warning, not a sustained-pattern check.
+#   - treat_missing_data = "notBreaching": expected in low-traffic dev environments
+#     (nights/weekends). "breaching" would create constant alert noise on idle envs.
+#   - threshold = 50 (default): 10 req/min sustained is abnormal for a dev environment.
+#     Prod threshold should be tuned upward once baseline traffic is established.
+#
+# Security implication: fires to the same SNS topic as all other alarms, so an
+# operator investigating a spike alarm can cross-reference the error and 5xx alarms
+# from the same time window to distinguish bots (high volume, no errors) from a
+# broken deploy (high volume + errors).
+resource "aws_cloudwatch_metric_alarm" "rating_spike" {
+  alarm_name          = "${local.name_prefix}-submit-rating-spike"
+  alarm_description   = "submit_rating received ${var.rating_spike_threshold}+ invocations in a 5-minute window. Potential rating stuffing or bot activity — check the rating_events audit log and WAF sampled requests."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Invocations"
+  dimensions          = { FunctionName = var.submit_rating_function_name }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = var.rating_spike_threshold
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+}
+
 # --- API Gateway: throttle count ---
 # Metric: 4XXError with a note — HTTP API v2 does not publish a dedicated
 # "ThrottleCount" metric. Throttles appear as 429s counted in 4XXError.
