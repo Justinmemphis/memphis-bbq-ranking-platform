@@ -17,7 +17,7 @@ Memphis BBQ Ranking Platform — Phase 3 Security Hardening
 | Leaderboard snapshot | Medium | Public-facing; stuffing or manipulation is reputation damage |
 | Restaurant data | Low | Read-heavy; no PII; loss is inconvenient but not a breach |
 | AWS credentials / IAM | Critical | Compromise = full account access |
-| Lambda environment variables | Medium | Contain table names and Cognito config; not credentials, but expose architecture |
+| Lambda environment variables | Low | Contain DynamoDB table names only — not credentials or sensitive config; audited 2026-04-10 |
 
 ---
 
@@ -128,16 +128,17 @@ Secondary surface: **IAM and secrets** — Lambda execution roles, SSM parameter
 |---|---|---|
 | No static AWS credentials anywhere | Architecture — GitHub Actions uses OIDC; no IAM access keys exist | Eliminates the most common credential leak vector |
 | GitHub Actions OIDC role scoped to this repo + branch | `infra/` OIDC trust policy | A compromised GitHub token from another repo cannot assume this role |
-| Lambda env vars contain only non-secret config (table names, Cognito Pool ID) | Terraform `lambda` module | No credentials or secrets are passed as environment variables |
-| SSM Parameter Store Standard for all secrets | Terraform + Lambda IAM | Secrets are fetched at runtime via IAM-controlled API; not in code or env vars |
-| Lambda IAM roles: `ssm:GetParameter` scoped to specific parameter paths | Lambda execution role policy | A Lambda can only read the SSM params it needs |
+| Lambda env vars contain only non-secret config (table names) | Terraform `lambda` module — audited 2026-04-10 | No credentials, tokens, or Cognito client secrets are in env vars; table names are not sensitive |
+| SSM Parameter Store Standard designated for all future secrets | Architecture decision — no secrets exist to store yet | When third-party API keys, SMTP credentials, or other sensitive config are needed, they go to SSM; Lambda IAM role gets `ssm:GetParameter` scoped to specific parameter paths |
 | Structured logs exclude PII and secrets | Log field schema: `level, message, requestId, userSub, route, statusCode, latencyMs, restaurantId` | No tokens, emails, or scores appear in CloudWatch logs |
 | `.gitignore` excludes `*.tfvars` local overrides, `.env` files | Repo config | Prevents accidental commit of local credential overrides |
 | IaC security scanning (Checkov) in CI | `.github/workflows/terraform.yml` | Blocks PRs that introduce Checkov-detected misconfigurations (e.g., unencrypted resources, logging disabled) |
 
+**SSM decision (audited 2026-04-10):** All five Lambda functions (`health`, `get_restaurants`, `get_restaurant_detail`, `get_leaderboard`, `submit_rating`) carry only DynamoDB table names in `environment_vars`. No credentials, API keys, or Cognito client secrets exist in env vars or anywhere in the codebase. SSM Parameter Store is the designated mechanism for future secrets; it is not currently in use because there are no secrets to store. SSM becomes necessary when: (1) a third-party API key is added (e.g., Google Places enrichment), (2) SMTP credentials are needed for notifications, or (3) a Cognito client secret is used (current setup uses a public client). At that point, a `ssm:GetParameter` policy scoped to the specific parameter path is added to the relevant Lambda's execution role.
+
 **Residual risks:**
-- Lambda environment variables are visible to anyone with `lambda:GetFunctionConfiguration` IAM permission. Table names and Cognito Pool IDs are not secrets, but this surface should be reviewed if the data model changes.
-- SSM Parameter Store Standard tier does not support automatic rotation. If a secret must rotate, Secrets Manager is the correct tool. Current secrets do not require rotation.
+- Lambda environment variables are visible to anyone with `lambda:GetFunctionConfiguration` IAM permission. Table names are not secrets, but this surface should be reviewed if the data model changes (e.g., adding auth tokens or connection strings as env vars).
+- SSM Parameter Store Standard tier does not support automatic rotation. If a secret requires rotation, Secrets Manager is the correct tool. No current secrets require rotation.
 - KMS encryption for DynamoDB tables and CloudWatch log groups is not yet enabled (Checkov skips `CKV_AWS_119`, `CKV_AWS_158` — planned for Phase 3 completion). Data at rest is protected by AWS default encryption but not customer-managed keys.
 
 ---
@@ -146,7 +147,7 @@ Secondary surface: **IAM and secrets** — Lambda execution roles, SSM parameter
 
 | Threat | Edge (WAF) | Auth (Cognito/JWT) | App Layer | Audit / Detection |
 |---|---|---|---|---|
-| Rating stuffing | Per-IP rate limit [prod] | One rating/user/restaurant (sub from JWT) | Score + restaurant_id validation | `rating_events` audit log; structured logs |
+| Rating stuffing | Per-IP rate limit [prod] | One rating/user/restaurant (sub from JWT) | Score + restaurant_id validation | `rating_events` audit log; structured logs; submit_rating invocation spike alarm |
 | Privilege escalation | — | JWT authorizer; per-env User Pools | Admin group guard (planned) | CloudWatch Lambda error alarms |
 | Injection | CommonRuleSet + KnownBadInputs [prod] | — | Input validation; DynamoDB parameterized API | Structured logs; WAF sampled request logs |
 | Secrets exposure | — | OIDC; no static keys | SSM for secrets; no PII in logs | Checkov CI gate; CloudWatch alarms |
@@ -170,6 +171,6 @@ Secondary surface: **IAM and secrets** — Lambda execution roles, SSM parameter
 | Admin UI (S3 + CloudFront) | Week 7 deep work | Planned |
 | Per-user rate limiting (Lambda@Edge on JWT sub) | Phase 4 | Deferred |
 | New-account submission throttle | Phase 3 | Planned |
-| CloudWatch alarm on rating submission spikes | Phase 3 | Planned |
+| CloudWatch alarm on rating submission spikes | Sprint 19 | Complete — dev: 50 invocations/5 min; prod: 200 invocations/5 min |
 | DynamoDB KMS CMK encryption | Phase 3 | Planned (Checkov skip documented) |
 | GuardDuty | Phase 4, prod only | Planned |

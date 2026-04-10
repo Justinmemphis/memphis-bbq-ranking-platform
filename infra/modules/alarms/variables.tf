@@ -23,3 +23,14 @@ variable "notification_email" {
   type        = string
   default     = ""
 }
+
+variable "submit_rating_function_name" {
+  description = "Fully-qualified name of the submit_rating Lambda function. Used for the rating submission spike alarm."
+  type        = string
+}
+
+variable "rating_spike_threshold" {
+  description = "Number of submit_rating invocations in a 5-minute window that triggers the spike alarm. Tune per environment: low in dev to catch any automated abuse; higher in prod to avoid false positives on legitimate traffic."
+  type        = number
+  default     = 50
+}

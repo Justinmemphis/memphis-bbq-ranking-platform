@@ -287,8 +287,10 @@ module "alarms" {
     module.lambda_submit_rating.function_name,
   ]
 
-  api_gateway_id     = module.api.api_id
-  notification_email = var.alarm_notification_email
+  api_gateway_id              = module.api.api_id
+  notification_email          = var.alarm_notification_email
+  submit_rating_function_name = module.lambda_submit_rating.function_name
+  rating_spike_threshold      = 50
 }
 
 # --- WAF WebACL ---
