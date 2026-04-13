@@ -184,6 +184,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 **Objective:** Prove you can run the thing.
 
 **Deliverables:**
+- [ ] **App-only CI deploy:** `app-deploy.yml` workflow — triggers on `app/**` push to main; runs `aws lambda update-function-code` (or targeted `terraform apply`) for all functions; OIDC auth same as terraform workflow. Currently Lambda code changes do NOT trigger a deploy — only infra changes do. Workaround: make a trivial infra change alongside any app-only deploy. Fix this before Phase 4 ops work begins.
 - [ ] SLO-style targets defined: latency, error rate, uptime
 - [ ] Alarms wired to SNS/email
 - [ ] Basic load/stress test (even small scale)
