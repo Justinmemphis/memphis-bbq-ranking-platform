@@ -243,3 +243,78 @@ Note: checkov is currently advisory only — must add as required status check i
 - [x] Gate verified: `requests==2.6.0` (5 known CVEs) correctly blocked PR #23; PR closed without merge
 
 **Definition of done:** PRs fail CI if pip-audit finds a vulnerability with a fix available. ✓ COMPLETE
+
+---
+
+## Week 6 (2026-04-05 – 2026-04-11)
+
+**Phase:** Phase 3 — Security Hardening (continued)
+
+---
+
+### Sunday 2026-04-05 (Sprint 14 — WAF module scaffold)
+
+- [x] Created `infra/modules/waf/` — `main.tf`, `variables.tf`, `outputs.tf`
+- [x] `enable_waf` variable (default false); module creates no resources when false
+- [x] WAF WebACL resource with `scope = "REGIONAL"` (API Gateway)
+- [x] Set `enable_waf = false` in dev tfvars; `enable_waf = true` in prod tfvars
+- [x] `terraform plan` for dev shows no WAF resources; prod plan shows WebACL stub
+- [x] Added 3 Checkov skip rules with justifications (CKV2_AWS_31, CKV_AWS_175, CKV_AWS_192)
+
+**Definition of done:** WAF module exists; dev plan clean; prod plan shows WebACL resource. ✓ COMPLETE
+
+---
+
+### Monday 2026-04-06 (Sprint 15 — WAF rules + rate limit)
+
+- [x] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
+- [x] Rate limit rule: 1000 requests / 5 minutes per IP
+- [x] Associate WebACL with API Gateway stage when `enable_waf = true`
+- [x] WAF CloudWatch logging added (`aws-waf-logs-bbq-prod`); resolves CKV2_AWS_31
+- [x] Full prod infra wired (all Lambda, Cognito, DynamoDB, API, Alarms); log retention 90 days
+- [x] 3 checkov skips removed — checks now pass natively
+- [x] Prod plan: 64 to add, 0 to change, 0 to destroy
+
+**Definition of done:** Prod plan shows full WAF WebACL with managed rules and rate limit; dev unaffected. ✓ COMPLETE
+
+---
+
+### Tuesday 2026-04-07 (Sprint 16 — Threat model)
+
+- [x] Wrote `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), mitigations mapped to actual controls
+- [x] Updated `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
+
+**Definition of done:** Threat model committed; every major threat has a named control; cost estimate updated. ✓ COMPLETE
+
+---
+
+### Wednesday 2026-04-08 (Sprint 17 + housekeeping)
+
+- [x] Added `IaC Security Scan (checkov)` as required status check in GitHub branch protection
+- [x] Fixed WAF WebACL association — HTTP APIs not supported by WAFv2 `AssociateWebACL`; removed association resource; WAF re-association deferred to Sprint 22 via CloudFront (PR #29)
+- [x] Reorganized `terraform.yml` — dev/prod grouped; checkov needs both plans; `.github/workflows/**` added to path triggers (PR #30)
+- [x] Re-added CKV2_AWS_31 checkov skip — checkov version regression on count expression correlation
+- [x] Prod apply clean end-to-end after PRs #28, #29, #30 merged
+
+**Definition of done:** Prod apply succeeds; checkov is a required status check; CI triggers on workflow changes. ✓ COMPLETE
+
+---
+
+### Thursday 2026-04-10 (Sprint 19 — SSM audit + spike alarm)
+
+- [x] Audited all Lambda `environment_vars` — all five functions carry DynamoDB table names only; no credentials, tokens, or keys
+- [x] Documented SSM decision: not needed yet; designated for future secrets (API keys, SMTP, etc.); documented in threat model with trigger conditions
+- [x] Added CloudWatch alarm on `POST /v1/ratings` invocation count spike — dev: 50/5 min, prod: 200/5 min
+
+**Definition of done:** SSM decision documented; spike alarm deployed to dev. ✓ COMPLETE
+
+---
+
+### Friday 2026-04-11 (Sprint 20 — Structured logging audit)
+
+- [x] Reviewed all 5 Lambda handlers (`health`, `get_restaurants`, `get_restaurant_detail`, `get_leaderboard`, `submit_rating`)
+- [x] Fixed `requestId` across all handlers — now sourced from `event["requestContext"]["requestId"]` (API Gateway request ID, not Lambda context object)
+- [x] Confirmed all handlers emit spec-compliant structured JSON: `level`, `message`, `requestId`, `userSub`, `route`, `statusCode`, `latencyMs`, `restaurantId` (where applicable) — no PII
+- [x] Fix CI path filter — removed `paths:` filter from PR trigger so required status checks always run on every PR regardless of which files changed
+
+**Definition of done:** All 5 handlers emit spec-compliant structured JSON logs. ✓ COMPLETE
