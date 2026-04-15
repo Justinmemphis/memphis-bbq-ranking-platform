@@ -390,6 +390,7 @@ resource "aws_iam_role_policy" "github_actions" {
           "s3:GetBucketOwnershipControls",
           "s3:PutBucketOwnershipControls",
           "s3:GetBucketLocation",
+          "s3:GetAccelerateConfiguration",
           "s3:PutObject",
           "s3:GetObject",
           "s3:DeleteObject",
