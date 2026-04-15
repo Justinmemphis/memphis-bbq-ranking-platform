@@ -21,8 +21,8 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 | **Lambda** | 3,000 invocations/month, ~200ms avg, 128 MB | ~$0.00 ($0.20/1M requests + $0.0000166667/GB-sec; negligible at this volume) |
 | **API Gateway HTTP API** | 3,000 requests/month | ~$0.00 ($1.00/1M requests) |
 | **DynamoDB** | PAY_PER_REQUEST; ~3K writes + 10K reads/month; <1 MB storage | ~$0.00 ($1.25/1M writes, $0.25/1M reads; $0.25/GB storage) |
-| **S3** | ~10 MB frontend assets; reads served via CloudFront | ~$0.00 ($0.023/GB storage; minimal PUT/GET requests) |
-| **CloudFront** | Low traffic; static frontend only | ~$0.00 ($0.0085/10K HTTPS requests; negligible at this volume) |
+| **S3** | ~10 MB frontend assets; reads served via CloudFront. Static site bucket deployed in Sprint 21 (prod only). | ~$0.00 ($0.023/GB storage; minimal PUT/GET requests) |
+| **CloudFront** | Static site distribution deployed in Sprint 21 (prod only). Low traffic portfolio usage. | ~$0.00 ($0.0085/10K HTTPS requests; negligible at this volume; no fixed monthly fee) |
 | **Cognito User Pools** | <10 MAUs, direct sign-in | $0.00 (direct sign-in MAUs are free up to 50K regardless of free tier) |
 | **CloudWatch Logs** | JSON logs, dev 14-day retention, prod 60-day retention | ~$0.05–0.25/month ($0.50/GB ingested; low volume) |
 | **CloudWatch Alarms** | 2–3 alarms | ~$0.30/month ($0.10/alarm/month) |
@@ -38,7 +38,7 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 
 | Service | Added/Changed | Monthly Cost |
 |---|---|---|
-| **AWS WAF WebACL** | 1 WebACL, REGIONAL scope (API Gateway); prod only | **$5.00/month** (flat fee per WebACL) |
+| **AWS WAF WebACL** | 1 WebACL, CLOUDFRONT scope (CloudFront distribution); prod only. Sprint 22 re-scopes from REGIONAL to CLOUDFRONT — WAF was REGIONAL initially (HTTP API association not supported), moving to CLOUDFRONT once CloudFront is deployed. | **$5.00/month** (flat fee per WebACL) |
 | **AWS WAF — Managed Rule Groups** | AWSManagedRulesCommonRuleSet + AWSManagedRulesKnownBadInputsRuleSet | **$0.00** (AWS Managed Rules are free) |
 | **AWS WAF — Requests** | ~3K requests/month evaluated by WAF | **~$0.00** ($0.60/1M requests; negligible at this volume) |
 | **CloudWatch Logs — WAF** | WAF sampled request logs; `aws-waf-logs-bbq-prod`; 90-day retention | **~$0.01–0.05/month** (very low volume; same $0.50/GB rate as other log groups) |
@@ -48,8 +48,7 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 **Phase 3 cumulative total: ~$5.55–6.05/month**
 
 > WAF is the first meaningful cost in this architecture. Prod only — decided.
-> WAF scope is REGIONAL (attaches to API Gateway HTTP API stage), not CLOUDFRONT.
-> CloudFront-scoped WAF would require a separate us-east-1 provider stack — not used here.
+> WAF was initially REGIONAL scope (Sprint 15). Sprint 22 re-scopes to CLOUDFRONT (attaches to CloudFront distribution). All resources remain in us-east-1 — no separate regional provider stack needed since CloudFront WebACLs must be in us-east-1, which is already our region.
 
 > **Recommendation:** Use SSM Parameter Store Standard (no per-parameter charge) for all secrets unless automatic rotation is required. Secrets Manager adds $0.40/secret/month and is justified only when rotation is needed.
 
@@ -99,7 +98,8 @@ For services that charge per resource (not per request), running both dev and pr
 
 | Service | Dev | Prod | Notes |
 |---|---|---|---|
-| WAF WebACL (REGIONAL / API Gateway) | not deployed | $5/month | Prod only — decided |
+| WAF WebACL (CLOUDFRONT scope — Sprint 22) | not deployed | $5/month | Prod only — decided |
+| CloudFront distribution (static site) | ~$0/month | ~$0/month | Both envs — no fixed fee; request-based; mirrors prod |
 | GuardDuty | not deployed | $1–3/month | Prod only — decided |
 | CloudWatch Alarms | ~$0.30/month | ~$0.30/month | Small; acceptable to run in both |
 | Everything else | ~$0 | ~$0 | Request-based; negligible at this volume |

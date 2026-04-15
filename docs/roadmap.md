@@ -237,94 +237,18 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-## Week 6 Sprint Plan (2026-04-05 – 2026-04-10)
+## Week 6 (2026-04-05 – 2026-04-11)
 
 **Phase:** Phase 3 — Security Hardening (continued)
 
-**Goal:** WAF scaffolded for prod, threat model written, branch protection hardened, secrets moved to SSM. Six short sprints Sun–Fri; no Saturday session this week. Week 7 opens with a long session Sunday 2026-04-12.
+_Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.md)._
 
----
-
-### Sunday 2026-04-05 (Sprint 14 — WAF module scaffold — short) ✓
-
-**Goal:** Create the WAF Terraform module skeleton and wire the `enable_waf` flag into both environments.
-
-- [x] Create `infra/modules/waf/` module: `main.tf`, `variables.tf`, `outputs.tf`
-- [x] `enable_waf` variable (default false); module creates no resources when false
-- [x] WAF WebACL resource with `scope = "REGIONAL"` (API Gateway)
-- [x] Set `enable_waf = false` in dev tfvars; `enable_waf = true` in prod tfvars
-- [x] `terraform plan` for dev shows no WAF resources; prod plan shows WebACL stub
-- [x] Added 3 Checkov skip rules with justifications (CKV2_AWS_31, CKV_AWS_175, CKV_AWS_192 — all addressed in Sprint 15)
-
-**Definition of done:** WAF module exists; dev plan clean; prod plan shows WebACL resource.
-
----
-
-### Monday 2026-04-06 (Sprint 15 — WAF rules + rate limit — short) ✓
-
-**Goal:** Add AWS managed rule groups and a per-IP rate limit rule to the WAF module.
-
-- [x] AWS managed rules: `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet`
-- [x] Rate limit rule: 1000 requests / 5 minutes per IP (abuse control on rating submissions)
-- [x] Associate WebACL with API Gateway stage when `enable_waf = true`
-- [x] WAF CloudWatch logging added (`aws-waf-logs-bbq-prod`); resolves CKV2_AWS_31
-- [x] Full prod infra wired (all Lambda, Cognito, DynamoDB, API, Alarms); log retention 90 days
-- [x] 3 checkov skips removed (CKV_AWS_175, CKV_AWS_192, CKV2_AWS_31) — checks now pass natively
-- [x] Prod plan: 64 to add, 0 to change, 0 to destroy; dev plan: 0 WAF resources
-
-**Definition of done:** Prod plan shows full WAF WebACL with managed rules and rate limit; dev unaffected.
-
----
-
-### Tuesday 2026-04-07 (Sprint 16 — Threat model — short) ✓
-
-**Goal:** Document the actual attack surface and controls in place. Writing sprint.
-
-- [x] Write `docs/03-threat-model.md` — assets, threats (rating stuffing, privilege escalation, injection, secrets exposure), mitigations mapped to actual controls
-- [x] Update `docs/04-cost-estimate.md` to include WAF ACL + rule costs (prod only)
-
-**Definition of done:** Threat model committed; every major threat has a named control mapped to it; cost estimate updated.
-
----
-
-### Wednesday 2026-04-08 (Sprint 17 + housekeeping) ✓
-
-**Goal:** Make checkov a hard CI gate; fix prod apply blockers from Sprint 18.
-
-- [x] Add `IaC Security Scan (checkov)` as required status check in GitHub branch protection
-- [x] Fix WAF WebACL association — HTTP APIs not supported by WAFv2 `AssociateWebACL`; removed association resource; WAF re-association deferred to Sprint 20 via CloudFront (PR #29)
-- [x] Reorganize `terraform.yml` — dev/prod grouped, checkov now needs both plans, `.github/workflows/**` added to path triggers (PR #30)
-- [x] Re-add CKV2_AWS_31 checkov skip — checkov version regression on count expression correlation
-- [x] Prod apply clean end-to-end after PRs #28, #29, #30 merged
-
-**Definition of done:** Prod apply succeeds; checkov is a required status check; CI triggers on workflow changes. ✓ COMPLETE
-
----
-
-### Thursday 2026-04-10 (Sprint 19 — SSM audit + spike alarm — 45 min) ✓
-
-**Goal:** Confirm no plaintext secrets in Lambda env vars; add rating submission spike alarm.
-
-- [x] Audit all Lambda `environment_vars` — all five functions carry DynamoDB table names only; no credentials, tokens, or keys
-- [x] Document the decision: SSM not needed yet; designated for future secrets (API keys, SMTP, etc.); documented in threat model with trigger conditions
-- [x] Add CloudWatch alarm on `POST /v1/ratings` invocation count spike — dev: 50/5 min, prod: 200/5 min
-
-**Definition of done:** SSM decision documented; spike alarm deployed to dev.
-
----
-
-### Friday 2026-04-11 (Sprint 20 — Structured logging audit — 45 min) ✓
-
-**Goal:** Verify all Lambda handlers emit structured JSON logs matching the spec.
-
-Log spec: `level`, `message`, `requestId`, `userSub`, `route`, `statusCode`, `latencyMs`, `restaurantId` (where applicable) — no PII.
-
-- [x] Review each Lambda handler (`health`, `get_restaurants`, `get_restaurant_detail`, `get_leaderboard`, `submit_rating`)
-- [x] Fix any missing fields or non-JSON log output
-- [x] Confirm `requestId` comes from `event["requestContext"]["requestId"]` (not Lambda context)
-- [x] Fix CI path filter — removed `paths:` filter from PR trigger so required status checks always run on every PR
-
-**Definition of done:** All 5 handlers emit spec-compliant structured JSON logs. ✓ COMPLETE
+- Sprint 14 (2026-04-05): WAF module scaffold ✓
+- Sprint 15 (2026-04-06): WAF rules + rate limit; full prod infra wired ✓
+- Sprint 16 (2026-04-07): Threat model written; cost estimate updated ✓
+- Sprint 17 (2026-04-08): Checkov required status check; WAF association deferred to CloudFront scope; prod apply clean ✓
+- Sprint 19 (2026-04-10): SSM audit; rating spike alarm deployed ✓
+- Sprint 20 (2026-04-11): Structured logging audit; CI path filter fixed ✓
 
 ---
 
@@ -342,7 +266,11 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Tuesday 2026-04-14 (Sprint 21 — CloudFront + S3 static site — 60 min)
+### Tuesday 2026-04-14 — Skipped
+
+---
+
+### Wednesday 2026-04-15 (Sprint 21 — CloudFront + S3 static site — 60 min)
 
 **Goal:** Deploy S3 static site behind CloudFront with OAC. Unblocks WAF CLOUDFRONT-scope association.
 
@@ -357,7 +285,7 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Wednesday 2026-04-15 (Sprint 22 — WAF re-scope to CLOUDFRONT — 45 min)
+### Thursday 2026-04-16 (Sprint 22 — WAF re-scope to CLOUDFRONT — 45 min)
 
 **Goal:** Move WAF WebACL from REGIONAL to CLOUDFRONT scope; associate with CloudFront distribution. Resolves the deferred Sprint 17 WAF association gap.
 
@@ -371,7 +299,7 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Thursday 2026-04-16 (Sprint 23 — Cognito admin group + route guard — 45 min)
+### Friday 2026-04-17 (Sprint 23 — Cognito admin group + route guard — 45 min)
 
 **Goal:** Create `admin` Cognito group; implement server-side group check; add guarded placeholder route.
 
@@ -386,7 +314,7 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Friday 2026-04-17 (Sprint 24 — Admin Lambda: list/manage users — 45 min)
+### Saturday 2026-04-18 (Sprint 24 — Admin Lambda: list/manage users — 45 min)
 
 **Goal:** Wire admin user management endpoints backed by Cognito.
 
@@ -400,7 +328,7 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 ---
 
-### Weekend 2026-04-18–19 (Long sprint — Audit log endpoint + Admin UI + Threat Model v2)
+### Sunday 2026-04-19 (Long sprint — Audit log endpoint + Admin UI + Threat Model v2)
 
 **Goal:** Close out Phase 3 — audit log queryable, admin UI live, threat model updated.
 

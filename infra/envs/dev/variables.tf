@@ -35,3 +35,9 @@ variable "enable_waf" {
   type        = bool
   default     = false
 }
+
+variable "enable_cloudfront" {
+  description = "Whether to create the S3 static site bucket and CloudFront distribution. Enabled in both dev and prod — no fixed monthly fee, so cost does not justify an environment gap."
+  type        = bool
+  default     = true
+}

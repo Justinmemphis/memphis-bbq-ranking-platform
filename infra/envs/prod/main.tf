@@ -271,10 +271,8 @@ module "alarms" {
 }
 
 # --- WAF WebACL ---
-# --- WAF WebACL ---
 # Prod has enable_waf = true — WebACL, managed rules, and rate limit are provisioned.
-# Association with the API is deferred to Sprint 20 via CloudFront — HTTP APIs
-# are not a supported WAFv2 association target (only REST APIs / v1 are supported).
+# Association with CloudFront is wired in Sprint 22 (CLOUDFRONT scope WebACL).
 # Rules: AWSManagedRulesCommonRuleSet + AWSManagedRulesKnownBadInputsRuleSet + per-IP rate limit.
 # Log retention: 90 days (prod standard).
 module "waf" {
@@ -283,6 +281,31 @@ module "waf" {
   environment        = var.environment
   enable_waf         = var.enable_waf
   log_retention_days = 90
+}
+
+# --- Static Site: S3 + CloudFront ---
+# Prod has enable_cloudfront = true — S3 bucket, OAC, and CloudFront distribution are provisioned.
+# Sprint 22 adds WAF WebACL association (CLOUDFRONT scope) using cloudfront_distribution_arn output.
+# The stub index.html is deployed via aws_s3_object below.
+module "static_site" {
+  source            = "../../modules/static_site"
+  app_name          = var.app_name
+  environment       = var.environment
+  enable_cloudfront = var.enable_cloudfront
+}
+
+# Deploy stub "Coming Soon" index.html to the static site bucket.
+# content_type: text/html required — S3 defaults to binary/octet-stream without it,
+# which causes browsers to download the file instead of rendering it.
+# etag: tracks file content hash so Terraform redeploys when the file changes.
+resource "aws_s3_object" "index_html" {
+  count = var.enable_cloudfront ? 1 : 0
+
+  bucket       = module.static_site.s3_bucket_name
+  key          = "index.html"
+  source       = "${path.root}/../../../static/index.html"
+  content_type = "text/html"
+  etag         = filemd5("${path.root}/../../../static/index.html")
 }
 
 output "api_endpoint" {
@@ -308,4 +331,14 @@ output "cognito_hosted_ui_url" {
 output "alarms_sns_topic_arn" {
   description = "SNS topic ARN for CloudWatch alarms"
   value       = module.alarms.sns_topic_arn
+}
+
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name — serves the static site"
+  value       = module.static_site.cloudfront_domain_name
+}
+
+output "static_site_bucket" {
+  description = "Static site S3 bucket name"
+  value       = module.static_site.s3_bucket_name
 }
