@@ -306,13 +306,24 @@ module "waf" {
 }
 
 # --- Static Site: S3 + CloudFront ---
-# Dev has enable_cloudfront = false — no resources created; plan stays lean.
-# Module call mirrors prod structure for parity. Sprint 22 adds WAF association (prod only).
+# Dev mirrors prod — CloudFront has no fixed monthly fee so there is no cost justification
+# for an environment gap. Sprint 22 adds WAF association in prod only (WAF costs $5/month).
 module "static_site" {
   source            = "../../modules/static_site"
   app_name          = var.app_name
   environment       = var.environment
   enable_cloudfront = var.enable_cloudfront
+}
+
+# Deploy stub index.html — same as prod; etag tracks file changes.
+resource "aws_s3_object" "index_html" {
+  count = var.enable_cloudfront ? 1 : 0
+
+  bucket       = module.static_site.s3_bucket_name
+  key          = "index.html"
+  source       = "${path.root}/../../../static/index.html"
+  content_type = "text/html"
+  etag         = filemd5("${path.root}/../../../static/index.html")
 }
 
 output "alarms_sns_topic_arn" {

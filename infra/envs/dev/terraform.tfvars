@@ -9,8 +9,8 @@ cognito_domain_prefix = "bbq-ranking-dev"
 # WAF is prod-only. Dev has no WebACL — saves ~$5/month in base fees.
 enable_waf = false
 
-# CloudFront is prod-only. Dev has no distribution — keeps the plan lean.
-enable_cloudfront = false
+# CloudFront mirrors prod. No fixed monthly fee — cost is negligible at portfolio traffic.
+enable_cloudfront = true
 
 # Email address for CloudWatch alarm notifications.
 # NOT set here — pass via environment variable to keep your email out of git:

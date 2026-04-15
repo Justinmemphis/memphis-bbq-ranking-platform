@@ -99,7 +99,7 @@ For services that charge per resource (not per request), running both dev and pr
 | Service | Dev | Prod | Notes |
 |---|---|---|---|
 | WAF WebACL (CLOUDFRONT scope — Sprint 22) | not deployed | $5/month | Prod only — decided |
-| CloudFront distribution (static site) | not deployed | ~$0/month | Prod only — no fixed fee; request-based |
+| CloudFront distribution (static site) | ~$0/month | ~$0/month | Both envs — no fixed fee; request-based; mirrors prod |
 | GuardDuty | not deployed | $1–3/month | Prod only — decided |
 | CloudWatch Alarms | ~$0.30/month | ~$0.30/month | Small; acceptable to run in both |
 | Everything else | ~$0 | ~$0 | Request-based; negligible at this volume |

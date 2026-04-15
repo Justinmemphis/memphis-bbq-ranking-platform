@@ -37,7 +37,7 @@ variable "enable_waf" {
 }
 
 variable "enable_cloudfront" {
-  description = "Whether to create the S3 static site bucket and CloudFront distribution. Dev is false — keeps the plan lean; CloudFront is prod-only for this project."
+  description = "Whether to create the S3 static site bucket and CloudFront distribution. Enabled in both dev and prod — no fixed monthly fee, so cost does not justify an environment gap."
   type        = bool
-  default     = false
+  default     = true
 }
