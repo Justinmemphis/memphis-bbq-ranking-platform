@@ -400,16 +400,12 @@ resource "aws_iam_role_policy" "github_actions" {
           "arn:aws:s3:::bbq-*-static/*",
         ]
       },
-      # --- CloudFront: distribution + OAC (Sprint 21 — static site) ---
-      # CloudFront ARNs are global (no region component) and include account ID.
-      # Covers: CreateDistribution/GetDistribution/UpdateDistribution/DeleteDistribution
-      # and OAC lifecycle operations needed by Terraform.
-      # GetInvalidation/CreateInvalidation included for future cache invalidation on deploy.
-      # Resource = "*" is used because CloudFront resource ARNs require the distribution ID,
-      # which is not known at policy-authoring time. Account ID scoping is handled by
-      # the OIDC trust policy (role is only assumable by this repo).
+      # --- CloudFront: distribution operations (Sprint 21 — static site) ---
+      # Scoped to all distributions in this account. Distribution IDs are not
+      # known at policy-authoring time so wildcard within the account is required.
+      # CloudFront ARNs are global (no region component).
       {
-        Sid    = "CloudFrontDistribution"
+        Sid    = "CloudFrontDistributions"
         Effect = "Allow"
         Action = [
           "cloudfront:CreateDistribution",
@@ -417,16 +413,35 @@ resource "aws_iam_role_policy" "github_actions" {
           "cloudfront:GetDistributionConfig",
           "cloudfront:UpdateDistribution",
           "cloudfront:DeleteDistribution",
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListTagsForResource",
+          "cloudfront:TagResource",
+          "cloudfront:UntagResource",
+        ]
+        Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/*"
+      },
+      # --- CloudFront: Origin Access Control operations (Sprint 21) ---
+      # Scoped to all OACs in this account. Same account-scoped wildcard pattern.
+      {
+        Sid    = "CloudFrontOAC"
+        Effect = "Allow"
+        Action = [
           "cloudfront:CreateOriginAccessControl",
           "cloudfront:GetOriginAccessControl",
           "cloudfront:GetOriginAccessControlConfig",
           "cloudfront:UpdateOriginAccessControl",
           "cloudfront:DeleteOriginAccessControl",
-          "cloudfront:ListTagsForResource",
-          "cloudfront:TagResource",
-          "cloudfront:UntagResource",
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetInvalidation",
+        ]
+        Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:origin-access-control/*"
+      },
+      # --- CloudFront: list operations (Sprint 21) ---
+      # ListDistributions and ListOriginAccessControls do not support resource-level
+      # ARN scoping — AWS requires Resource = "*" for these actions.
+      {
+        Sid    = "CloudFrontList"
+        Effect = "Allow"
+        Action = [
           "cloudfront:ListDistributions",
           "cloudfront:ListOriginAccessControls",
         ]
