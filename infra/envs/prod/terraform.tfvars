@@ -9,6 +9,9 @@ cognito_domain_prefix = "bbq-ranking-prod"
 # WAF is enabled for prod — WebACL protects the API Gateway stage.
 enable_waf = true
 
+# CloudFront is enabled for prod — serves the static site; required for WAF CLOUDFRONT scope (Sprint 22).
+enable_cloudfront = true
+
 # Email address for CloudWatch alarm notifications.
 # NOT set here — pass via environment variable to keep your email out of git:
 #   export TF_VAR_alarm_notification_email="your@email.com"

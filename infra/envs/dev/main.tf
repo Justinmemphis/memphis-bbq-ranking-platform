@@ -296,8 +296,7 @@ module "alarms" {
 # --- WAF WebACL ---
 # Dev intentionally has enable_waf = false — WAF costs ~$5/month regardless of traffic.
 # Module call mirrors prod structure; no resources are created when enable_waf = false.
-# WAF association with the API is deferred to Sprint 20 via CloudFront — HTTP APIs
-# are not a supported WAFv2 association target.
+# WAF association with CloudFront is wired in Sprint 22 (CLOUDFRONT scope WebACL).
 module "waf" {
   source             = "../../modules/waf"
   app_name           = var.app_name
@@ -306,9 +305,29 @@ module "waf" {
   log_retention_days = 14
 }
 
+# --- Static Site: S3 + CloudFront ---
+# Dev has enable_cloudfront = false — no resources created; plan stays lean.
+# Module call mirrors prod structure for parity. Sprint 22 adds WAF association (prod only).
+module "static_site" {
+  source            = "../../modules/static_site"
+  app_name          = var.app_name
+  environment       = var.environment
+  enable_cloudfront = var.enable_cloudfront
+}
+
 output "alarms_sns_topic_arn" {
   description = "SNS topic ARN for CloudWatch alarms"
   value       = module.alarms.sns_topic_arn
+}
+
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name (empty when enable_cloudfront = false)"
+  value       = module.static_site.cloudfront_domain_name
+}
+
+output "static_site_bucket" {
+  description = "Static site S3 bucket name (empty when enable_cloudfront = false)"
+  value       = module.static_site.s3_bucket_name
 }
 
 output "api_endpoint" {

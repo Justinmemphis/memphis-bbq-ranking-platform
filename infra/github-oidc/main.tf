@@ -357,6 +357,81 @@ resource "aws_iam_role_policy" "github_actions" {
           "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/managedruleset/*/*",
         ]
       },
+      # --- S3: static site bucket (Sprint 21 — CloudFront + static site) ---
+      # Scoped to bbq-*-static buckets only (bucket and objects).
+      # PutObject/GetObject/DeleteObject needed to deploy and manage index.html via aws_s3_object.
+      # Bucket management actions needed for Terraform to create/destroy the bucket and its config.
+      # s3:GetBucketLocation is required by the AWS S3 API for any bucket operation.
+      {
+        Sid    = "S3StaticSite"
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket",
+          "s3:DeleteBucket",
+          "s3:GetBucketVersioning",
+          "s3:PutBucketVersioning",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:DeleteBucketPolicy",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetBucketAcl",
+          "s3:GetBucketCORS",
+          "s3:GetBucketWebsite",
+          "s3:GetBucketLogging",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketRequestPayment",
+          "s3:GetLifecycleConfiguration",
+          "s3:ListBucket",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging",
+          "s3:GetBucketOwnershipControls",
+          "s3:PutBucketOwnershipControls",
+          "s3:GetBucketLocation",
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:GetObjectVersion",
+        ]
+        Resource = [
+          "arn:aws:s3:::bbq-*-static",
+          "arn:aws:s3:::bbq-*-static/*",
+        ]
+      },
+      # --- CloudFront: distribution + OAC (Sprint 21 — static site) ---
+      # CloudFront ARNs are global (no region component) and include account ID.
+      # Covers: CreateDistribution/GetDistribution/UpdateDistribution/DeleteDistribution
+      # and OAC lifecycle operations needed by Terraform.
+      # GetInvalidation/CreateInvalidation included for future cache invalidation on deploy.
+      # Resource = "*" is used because CloudFront resource ARNs require the distribution ID,
+      # which is not known at policy-authoring time. Account ID scoping is handled by
+      # the OIDC trust policy (role is only assumable by this repo).
+      {
+        Sid    = "CloudFrontDistribution"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateDistribution",
+          "cloudfront:GetDistribution",
+          "cloudfront:GetDistributionConfig",
+          "cloudfront:UpdateDistribution",
+          "cloudfront:DeleteDistribution",
+          "cloudfront:CreateOriginAccessControl",
+          "cloudfront:GetOriginAccessControl",
+          "cloudfront:GetOriginAccessControlConfig",
+          "cloudfront:UpdateOriginAccessControl",
+          "cloudfront:DeleteOriginAccessControl",
+          "cloudfront:ListTagsForResource",
+          "cloudfront:TagResource",
+          "cloudfront:UntagResource",
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListDistributions",
+          "cloudfront:ListOriginAccessControls",
+        ]
+        Resource = "*"
+      },
       # --- CloudWatch log resource policy (Sprint 15 — WAF logging) ---
       # aws_cloudwatch_log_resource_policy (used to grant WAF delivery.logs access)
       # requires PutResourcePolicy/DeleteResourcePolicy.
