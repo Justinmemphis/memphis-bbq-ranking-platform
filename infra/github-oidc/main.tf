@@ -364,6 +364,8 @@ resource "aws_iam_role_policy" "github_actions" {
       # s3:GetBucketLocation is required by the AWS S3 API for any bucket operation.
       # Sprint 22: added GetAccelerateConfiguration, GetReplicationConfiguration,
       # GetBucketNotification — Terraform AWS provider reads these on every refresh.
+      # Sprint 22: added PutObjectTagging, GetObjectTagging, DeleteObjectTagging —
+      # required when aws_s3_object uploads index.html (Terraform tags the object).
       # Each was discovered as a missing permission during plan/apply CI failures.
       {
         Sid    = "S3StaticSite"
@@ -400,6 +402,9 @@ resource "aws_iam_role_policy" "github_actions" {
           "s3:GetObject",
           "s3:DeleteObject",
           "s3:GetObjectVersion",
+          "s3:PutObjectTagging",
+          "s3:GetObjectTagging",
+          "s3:DeleteObjectTagging",
         ]
         Resource = [
           "arn:aws:s3:::bbq-*-static",
