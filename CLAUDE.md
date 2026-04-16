@@ -1,86 +1,88 @@
-# Claude Code Rules for This Project
+# Claude Code Rules — Memphis BBQ Ranking Platform
 
-## Terraform
+## Hard Rules
 
+**Terraform:**
 - Claude may run `terraform init` and `terraform plan` freely.
-- **`terraform apply` is only ever run by GitHub Actions** — never locally, never by Claude. All environments (dev and prod) are applied exclusively via the CI/CD pipeline on merge to main.
-- Always present plan output for review before a PR is merged. The apply happens automatically after merge.
+- `terraform apply` is CI-only — never locally, never by Claude.
+- Any change under `infra/` must go through a PR.
 
-## Git / GitHub
-
+**Git / GitHub:**
 - Claude may run `git add` and `git commit`.
-- **Only the user runs `git push`.** Claude must never push to the remote repository.
-- Claude may open pull requests using `gh pr create`.
-- **Only the user approves and merges pull requests.** Claude must never merge or close PRs.
-- **Any change under `infra/` must go through a PR** — never commit directly to main for infrastructure changes. Branch → PR → plan runs → merge → apply.
+- Only the user runs `git push`.
+- Claude may open PRs with `gh pr create`.
+- Only the user approves and merges PRs.
+- Doc-only changes (no code, no `infra/` files) may commit directly to main.
 
-## How Claude Should Assist on This Project
+## Project Identity
 
-The user owns architecture decisions, security reasoning, and verification. Claude accelerates implementation. This is a career-development project — the user must be able to explain and defend every decision.
+Memphis BBQ Ranking Platform. The app is BBQ; the portfolio signal is production-grade cloud security engineering. AWS (us-east-1), Terraform, Python Lambda, API Gateway, DynamoDB, Cognito, S3 + CloudFront.
 
-**Claude's role (do these):**
-- Implement what the user specifies; scaffold boilerplate, modules, workflows, tests, docs
-- When writing any non-trivial block, annotate it with: what it does, why it's designed this way, security implications, and alternatives considered
-- When presenting multiple approaches, compare tradeoffs across cost, security, and complexity
-- Flag anything touching IAM, networking/security groups, auth, data deletion, or billing for explicit user verification before proceeding
-- After generating Terraform, prompt the user to run: `terraform fmt`, `terraform validate`, `tflint`, and review `terraform plan` line-by-line
+Naming: `${app}-${env}-${resource}`. Environments: `dev`, `prod`. Single AWS account.
 
-**Claude must not:**
-- Make architecture or data model decisions without the user's explicit input
+## Stack
+
+- Frontend: S3 + CloudFront
+- Backend: Lambda (Python) + API Gateway HTTP API
+- Auth: Cognito User Pools; JWT authorizer; `sub` from `event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]`
+- DB: DynamoDB — tables: `restaurants`, `ratings` (PK: user_id, SK: restaurant_id), `rating_events`, `leaderboard_snapshot`
+- IaC: Terraform (modules in `infra/modules/`, envs in `infra/envs/`)
+- CI/CD: GitHub Actions + OIDC (no static keys)
+
+## How Claude Assists
+
+This is a career-development project. The user owns architecture decisions and must be able to explain every choice.
+
+**Do:**
+- Implement what the user specifies
+- Annotate non-trivial blocks: what it does, why, security implications, alternatives considered
+- Compare approaches across cost, security, and complexity when multiple options exist
+- Flag anything touching IAM, networking, auth, data deletion, or billing before proceeding
+- After generating Terraform: prompt user to run `terraform fmt`, `terraform validate`, `tflint`, review plan
+
+**Don't:**
+- Make architecture or data model decisions without explicit user input
 - Skip annotations on security-relevant code to save space
-- Silently assume an approach is safe — call out known sharp edges and AWS limitations
+- Silently assume an approach is safe
 
-**Expected workflow per task:**
-1. User writes a mini-spec (inputs, outputs, constraints, definition of done)
-2. Claude implements with inline annotations
-3. User runs the verification checklist
-4. User rewrites the "why" in their own words for README/docs
+## Workflow: Subagents + Skills
 
-## Modern SDLC Principles
+Use the agents and skills in `.claude/` to keep the main conversation clean.
 
-This project follows modern SDLC practices as a deliberate career-development exercise.
+**Agents** (`.claude/agents/`):
+- `@planner` — decompose a task before touching code (read-only)
+- `@implementer` — write code and Terraform following the plan
+- `@reviewer` — review changes for correctness, security, test gaps (read-only)
 
-**Branching:**
-- All work happens on feature branches (e.g., `feature/terraform-foundation`, `fix/auth-claims`)
-- No direct commits to `main` — all changes go through a PR
-- CI must pass before a PR can be merged
-- **Exception:** doc-only changes (no code, no `infra/` files) may be committed directly to `main`
+**Skills** (invoke with `/`):
+- `/implement-feature <description>` — full feature implementation loop
+- `/review-security [scope]` — security-focused review (runs in forked subagent)
+- `/trace-bug <symptom>` — root-cause investigation (runs in forked subagent)
+- `/ship-pr` — stage, commit, draft PR description
 
-**Definition of done (per feature/task):**
-- Code deployed to dev environment
-- Basic test or smoke check passing
-- Relevant docs updated in the same session
+**Typical workflow:**
+1. Ask `@planner` to break down the task
+2. Run `/implement-feature` or ask `@implementer` directly
+3. Run `/review-security` or ask `@reviewer` on changed files
+4. Run `/ship-pr` to prepare the commit and PR
 
-**CI gates (must pass before merge):**
-- `terraform fmt -check` + `terraform validate`
-- Python linting (ruff or flake8)
-- Unit tests
-- IaC security scan (tfsec/checkov) — added in Phase 3
+## IAM Policy Rules
 
-**Release tagging:**
-- Prod deployments are tagged with semver (e.g., `v0.1.0`)
-- Tag message summarizes what changed
+- Scope permissions to specific resource ARNs where possible
+- When `Resource: "*"` is required, comment: why it's needed and that it's an AWS limitation
+- Each new IAM statement gets a sprint/task reference and explanation
+- No `Action: "*"` ever
 
-**ADRs:**
-- Significant architectural decisions get an ADR in `docs/adr/`
-- Format: context → decision → rationale → consequences
-- One page maximum
+## Logging Rules
 
-**Vertical slices:**
-- Every PR delivers something observable — a working endpoint, a deployed resource, a passing test
-- No "big bang" PRs that touch everything at once
+JSON structured logs only. Allowed fields: `level`, `message`, `requestId`, `userSub`, `route`, `statusCode`, `latencyMs`, `restaurantId`. No PII.
+
+## ADRs
+
+Significant architectural decisions get an ADR in `docs/adr/`. Format: context → decision → rationale → consequences. One page max.
 
 ## Command Formatting
 
-When presenting shell commands to the user:
-- **Always use true single-line commands** — no backslash continuations, no heredocs, no wrapping.
-- For multi-step sequences that share variables (e.g. TOKEN), present each step as a separate single-line command. Variables persist in the zsh session between pastes.
-- For genuinely complex scripts (more than ~3 steps), write a `.sh` file using the Write tool and tell the user to run `bash <filename>`. Do not inline complex scripts as shell commands.
-
-## General Workflow Reminders
-
-- Follow modern DevSecOps principles: Infrastructure as Code, least privilege, no long-lived secrets, security as a first-class concern.
-- Prefer small, vertical slices of work that are deployable and testable independently.
-- Document architecture decisions in `docs/adr/` as ADR files.
-- Keep docs current — update them in the same session as the related code change.
-- When a design decision adds, removes, or changes an AWS service, update `docs/04-cost-estimate.md` in the same session.
+- Single-line commands only — no backslash continuations
+- Multi-step sequences: one command per line; variables persist in zsh
+- Complex scripts (3+ steps): write a `.sh` file, tell user to run `bash <filename>`
