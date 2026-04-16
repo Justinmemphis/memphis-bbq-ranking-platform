@@ -362,6 +362,9 @@ resource "aws_iam_role_policy" "github_actions" {
       # PutObject/GetObject/DeleteObject needed to deploy and manage index.html via aws_s3_object.
       # Bucket management actions needed for Terraform to create/destroy the bucket and its config.
       # s3:GetBucketLocation is required by the AWS S3 API for any bucket operation.
+      # Sprint 22: added GetAccelerateConfiguration, GetReplicationConfiguration,
+      # GetBucketNotification — Terraform AWS provider reads these on every refresh.
+      # Each was discovered as a missing permission during plan/apply CI failures.
       {
         Sid    = "S3StaticSite"
         Effect = "Allow"
@@ -391,6 +394,8 @@ resource "aws_iam_role_policy" "github_actions" {
           "s3:PutBucketOwnershipControls",
           "s3:GetBucketLocation",
           "s3:GetAccelerateConfiguration",
+          "s3:GetReplicationConfiguration",
+          "s3:GetBucketNotification",
           "s3:PutObject",
           "s3:GetObject",
           "s3:DeleteObject",
