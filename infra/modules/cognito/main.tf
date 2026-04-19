@@ -92,9 +92,18 @@ resource "aws_cognito_user_pool_client" "this" {
   # a separate confidential client alongside this one.
   generate_secret = false
 
-  # OAuth: authorization code flow only (implicit and client_credentials disabled).
-  # allowed_oauth_flows_user_pool_client must be true to enable OAuth on this client.
-  allowed_oauth_flows                  = ["code"]
+  # OAuth: code flow for API consumers; implicit flow additionally enabled for the
+  # admin UI SPA (no build step, no PKCE exchange possible from a static S3 page
+  # without a backend relay). The implicit flow enables the admin UI to receive
+  # an ID token + access token directly in the URL hash after Hosted UI login.
+  #
+  # Security tradeoff: implicit flow exposes tokens in the URL/browser history.
+  # Mitigations in place: (1) access tokens are short-lived (60 min), (2) tokens
+  # only ever land on the registered callback URL, (3) admin routes still perform
+  # server-side group checks — a stolen token cannot escalate further.
+  # Phase 5 upgrade path: replace implicit flow with PKCE + Lambda@Edge proxy for
+  # the token exchange, then remove "implicit" from this list.
+  allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
 
@@ -121,4 +130,18 @@ resource "aws_cognito_user_pool_client" "this" {
     id_token      = "minutes"
     refresh_token = "days"
   }
+}
+
+# --- Admin Group ---
+# Members of this group can access /v1/admin/* routes.
+# Group membership is checked server-side in each admin Lambda via
+# cognito-idp:AdminListGroupsForUser — the JWT claim alone is not trusted
+# because Cognito does not include group membership in the access token by
+# default (only in the ID token, and only when explicitly configured).
+# Server-side verification ensures the check is authoritative even if clients
+# present a stale or manipulated token.
+resource "aws_cognito_user_group" "admin" {
+  name         = "admin"
+  user_pool_id = aws_cognito_user_pool.this.id
+  description  = "Platform administrators — grants access to /v1/admin/* routes"
 }

@@ -21,3 +21,8 @@ output "hosted_ui_base_url" {
   description = "Base URL for the Cognito Hosted UI (login page, token endpoint, etc.)"
   value       = "https://${var.domain_prefix}.auth.us-east-1.amazoncognito.com"
 }
+
+output "user_pool_arn" {
+  description = "Cognito User Pool ARN — used to scope IAM policies for admin Lambdas (e.g. AdminListGroupsForUser)"
+  value       = aws_cognito_user_pool.this.arn
+}

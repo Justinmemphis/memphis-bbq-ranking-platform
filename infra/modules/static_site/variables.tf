@@ -13,3 +13,9 @@ variable "enable_cloudfront" {
   type        = bool
   default     = false
 }
+
+variable "web_acl_id" {
+  description = "WAF WebACL ARN (CLOUDFRONT scope) to associate with the CloudFront distribution. Null when WAF is not enabled (dev). Passed from the waf module's web_acl_arn output."
+  type        = string
+  default     = null
+}

@@ -109,20 +109,23 @@ resource "aws_cloudfront_origin_access_control" "static" {
 # Cache: AWS managed CachingOptimized policy — appropriate for immutable static assets.
 # TLS: default CloudFront cert (cloudfront.net domain); TLSv1.2_2021 requires ACM cert.
 #
-# checkov skip CKV_AWS_68:  WAF not associated — WAF is wired to CloudFront in Sprint 22
-#                           via CLOUDFRONT-scope WebACL.
+# checkov skip CKV_AWS_68:  WAF is associated in prod via web_acl_id (CLOUDFRONT-scope WebACL).
+#                           Dev intentionally runs without WAF (enable_waf = false); the
+#                           web_acl_id variable is null in dev, so no WAF is attached.
+#                           Checkov cannot distinguish null vs non-null at module-scan time.
 # checkov skip CKV_AWS_86:  Access logging disabled — not required for portfolio project;
 #                           CloudFront metrics via CloudWatch are sufficient.
 # checkov skip CKV_AWS_174: TLS 1.2 minimum — default CloudFront cert restricts
 #                           minimum_protocol_version to TLSv1; TLSv1.2_2021 requires a
 #                           custom ACM cert. Deferred to Phase 5.
 resource "aws_cloudfront_distribution" "static" {
-  # checkov:skip=CKV_AWS_68:WAF association wired in Sprint 22 via CLOUDFRONT-scope WebACL
+  # checkov:skip=CKV_AWS_68:WAF wired in prod via web_acl_id (CLOUDFRONT scope); dev has enable_waf=false so web_acl_id is null — Checkov cannot distinguish at scan time
   # checkov:skip=CKV_AWS_86:Access logging not required for portfolio project
   # checkov:skip=CKV_AWS_174:Default CloudFront cert limits minimum_protocol_version to TLSv1; custom ACM cert needed for TLSv1.2_2021, deferred to Phase 5
-  count   = var.enable_cloudfront ? 1 : 0
-  enabled = true
-  comment = "${var.app_name}-${var.environment} static site"
+  count      = var.enable_cloudfront ? 1 : 0
+  enabled    = true
+  comment    = "${var.app_name}-${var.environment} static site"
+  web_acl_id = var.web_acl_id
 
   default_root_object = "index.html"
 

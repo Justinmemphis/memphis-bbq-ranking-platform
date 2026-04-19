@@ -34,6 +34,15 @@ module "cognito" {
   app_name      = var.app_name
   environment   = var.environment
   domain_prefix = var.cognito_domain_prefix
+
+  callback_urls = [
+    "http://localhost",
+    "https://${module.static_site.cloudfront_domain_name}/admin/index.html",
+  ]
+  logout_urls = [
+    "http://localhost",
+    "https://${module.static_site.cloudfront_domain_name}/admin/index.html",
+  ]
 }
 
 # --- Lambda: health ---
@@ -243,7 +252,160 @@ module "api" {
       invoke_arn    = module.lambda_submit_rating.invoke_arn
       function_name = module.lambda_submit_rating.function_name
     }
+    "GET /v1/admin/health" = {
+      invoke_arn    = module.lambda_admin_health.invoke_arn
+      function_name = module.lambda_admin_health.function_name
+    }
+    "GET /v1/admin/users" = {
+      invoke_arn    = module.lambda_admin_list_users.invoke_arn
+      function_name = module.lambda_admin_list_users.function_name
+    }
+    "POST /v1/admin/users/{sub}/action" = {
+      invoke_arn    = module.lambda_admin_manage_user.invoke_arn
+      function_name = module.lambda_admin_manage_user.function_name
+    }
+    "GET /v1/admin/audit-log" = {
+      invoke_arn    = module.lambda_admin_audit_log.invoke_arn
+      function_name = module.lambda_admin_audit_log.function_name
+    }
   }
+}
+
+# --- Lambda: admin_audit_log ---
+# GET /v1/admin/audit-log?restaurant_id=X — queries rating_events by restaurant. Admin-only.
+module "lambda_admin_audit_log" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-audit-log"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_audit_log.handler.handler"
+  log_retention_days = 90
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+    RATING_EVENTS_TABLE  = module.dynamodb.rating_events_table_name
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "QueryRatingEvents"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query"]
+        Resource = module.dynamodb.rating_events_table_arn
+      },
+      {
+        Sid      = "ListGroupsForUser"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminListGroupsForUser"]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_list_users ---
+# GET /v1/admin/users — returns Cognito user list. Admin-only.
+module "lambda_admin_list_users" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-list-users"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_list_users.handler.handler"
+  log_retention_days = 90
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AdminUserOps"
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminListGroupsForUser",
+        ]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_manage_user ---
+# POST /v1/admin/users/{sub}/action — disable, enable, or force-reset a user. Admin-only.
+module "lambda_admin_manage_user" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-manage-user"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_manage_user.handler.handler"
+  log_retention_days = 90
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AdminUserMgmt"
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:AdminDisableUser",
+          "cognito-idp:AdminEnableUser",
+          "cognito-idp:AdminResetUserPassword",
+          "cognito-idp:AdminListGroupsForUser",
+        ]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_health ---
+# GET /v1/admin/health — smoke-test for the admin group guard.
+# Returns 200 for members of the 'admin' Cognito group; 403 for all others.
+# IAM: AdminListGroupsForUser scoped to this environment's User Pool ARN only.
+module "lambda_admin_health" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-health"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_health.handler.handler"
+  log_retention_days = 90
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ListGroupsForUser"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminListGroupsForUser"]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
 }
 
 # --- CloudWatch Alarms + SNS ---
@@ -260,6 +422,10 @@ module "alarms" {
     module.lambda_get_restaurant_detail.function_name,
     module.lambda_get_leaderboard.function_name,
     module.lambda_submit_rating.function_name,
+    module.lambda_admin_health.function_name,
+    module.lambda_admin_list_users.function_name,
+    module.lambda_admin_manage_user.function_name,
+    module.lambda_admin_audit_log.function_name,
   ]
 
   api_gateway_id              = module.api.api_id
@@ -285,13 +451,14 @@ module "waf" {
 
 # --- Static Site: S3 + CloudFront ---
 # Prod has enable_cloudfront = true — S3 bucket, OAC, and CloudFront distribution are provisioned.
-# Sprint 22 adds WAF WebACL association (CLOUDFRONT scope) using cloudfront_distribution_arn output.
-# The stub index.html is deployed via aws_s3_object below.
+# web_acl_id wires the CLOUDFRONT-scope WAF WebACL to the distribution.
+# In prod, module.waf.web_acl_arn is a real ARN; Terraform sets it on the CloudFront resource.
 module "static_site" {
   source            = "../../modules/static_site"
   app_name          = var.app_name
   environment       = var.environment
   enable_cloudfront = var.enable_cloudfront
+  web_acl_id        = module.waf.web_acl_arn
 }
 
 # Deploy stub "Coming Soon" index.html to the static site bucket.
@@ -306,6 +473,53 @@ resource "aws_s3_object" "index_html" {
   source       = "${path.root}/../../../static/index.html"
   content_type = "text/html"
   etag         = filemd5("${path.root}/../../../static/index.html")
+}
+
+# --- Admin UI: S3 deployment ---
+resource "aws_s3_object" "admin_index_html" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "admin/index.html"
+  source       = "${path.root}/../../../app/admin/index.html"
+  content_type = "text/html"
+  etag         = filemd5("${path.root}/../../../app/admin/index.html")
+}
+
+resource "aws_s3_object" "admin_js" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "admin/admin.js"
+  source       = "${path.root}/../../../app/admin/admin.js"
+  content_type = "application/javascript"
+  etag         = filemd5("${path.root}/../../../app/admin/admin.js")
+}
+
+resource "aws_s3_object" "admin_css" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "admin/style.css"
+  source       = "${path.root}/../../../app/admin/style.css"
+  content_type = "text/css"
+  etag         = filemd5("${path.root}/../../../app/admin/style.css")
+}
+
+resource "aws_s3_object" "admin_config" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "admin/config.json"
+  content_type = "application/json"
+  content = jsonencode({
+    api_endpoint      = module.api.api_endpoint
+    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id = module.cognito.user_pool_client_id
+    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/admin/index.html"
+  })
+  etag = md5(jsonencode({
+    api_endpoint      = module.api.api_endpoint
+    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id = module.cognito.user_pool_client_id
+    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/admin/index.html"
+  }))
 }
 
 output "api_endpoint" {

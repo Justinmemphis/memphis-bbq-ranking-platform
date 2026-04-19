@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memphis BBQ — Admin</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+<div id="app" style="display:none">
+  <header>
+    <h1>Memphis BBQ Admin</h1>
+    <div>
+      <span id="admin-email" style="margin-right:1rem;font-size:.9rem;opacity:.8"></span>
+      <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <main>
+    <div id="status-msg"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="users" onclick="switchTab('users')">Users</button>
+      <button class="tab" data-tab="audit" onclick="switchTab('audit')">Audit Log</button>
+    </div>
+
+    <!-- Users panel -->
+    <div class="panel active" id="panel-users">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Sub</th>
+            <th>Status</th>
+            <th>Account State</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="5">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Audit Log panel -->
+    <div class="panel" id="panel-audit">
+      <div class="audit-form">
+        <input id="audit-restaurant-id" type="text" placeholder="restaurant_id (e.g. paynes-bar-b-que)">
+        <button onclick="loadAuditLog()">Search</button>
+      </div>
+      <div id="audit-events"></div>
+    </div>
+  </main>
+</div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>
