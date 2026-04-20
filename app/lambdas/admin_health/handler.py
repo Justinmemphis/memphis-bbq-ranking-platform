@@ -30,7 +30,7 @@ def handler(event, context):
 
     try:
         admin = is_admin(event, COGNITO_USER_POOL_ID)
-    except Exception as exc:
+    except Exception:
         logger.error(json.dumps({
             "level": "ERROR",
             "message": "cognito group lookup failed",
