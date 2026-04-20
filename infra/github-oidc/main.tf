@@ -250,6 +250,12 @@ resource "aws_iam_role_policy" "github_actions" {
           "cognito-idp:TagResource",
           "cognito-idp:UntagResource",
           "cognito-idp:ListTagsForResource",
+          # Sprint 23: Cognito group management for the 'admin' group resource.
+          "cognito-idp:CreateGroup",
+          "cognito-idp:DeleteGroup",
+          "cognito-idp:GetGroup",
+          "cognito-idp:UpdateGroup",
+          "cognito-idp:ListGroups",
         ]
         Resource = "arn:aws:cognito-idp:us-east-1:${data.aws_caller_identity.current.account_id}:userpool/*"
       },
@@ -328,12 +334,18 @@ resource "aws_iam_role_policy" "github_actions" {
       # Required for aws_wafv2_web_acl, aws_wafv2_web_acl_logging_configuration,
       # and aws_wafv2_web_acl_association resources.
       #
-      # Two resource ARNs are required:
-      # 1. The WebACL itself: regional/webacl/bbq-*/ID
-      # 2. Managed rule sets: regional/managedruleset/*/* — AWS checks this when
-      #    CreateWebACL references managed rule groups (AWSManagedRulesCommonRuleSet
-      #    etc.). The account ID in the ARN is the *caller's* account even though the
-      #    rule groups are AWS-managed — this is an AWS IAM evaluation quirk.
+      # Four resource ARNs are required:
+      # 1. The WebACL itself — regional/ prefix for REGIONAL scope (historical).
+      # 2. The WebACL itself — global/ prefix for CLOUDFRONT scope (Sprint 22).
+      # 3. Managed rule sets — regional/managedruleset/*/* (REGIONAL scope).
+      # 4. Managed rule sets — global/managedruleset/*/* (CLOUDFRONT scope).
+      #
+      # Sprint 22: WAF re-scoped from REGIONAL to CLOUDFRONT. CLOUDFRONT-scope
+      # WebACL ARNs use the global/ prefix instead of regional/ even though the
+      # resource is deployed in us-east-1. Both patterns are included so the role
+      # covers the destroy (old REGIONAL) + create (new CLOUDFRONT) in one apply.
+      # The account ID in managed ruleset ARNs is the *caller's* account even though
+      # the rule groups are AWS-managed — this is an AWS IAM evaluation quirk.
       {
         Sid    = "WAFWebACL"
         Effect = "Allow"
@@ -355,6 +367,8 @@ resource "aws_iam_role_policy" "github_actions" {
         Resource = [
           "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/webacl/bbq-*/*",
           "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:regional/managedruleset/*/*",
+          "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:global/webacl/bbq-*/*",
+          "arn:aws:wafv2:us-east-1:${data.aws_caller_identity.current.account_id}:global/managedruleset/*/*",
         ]
       },
       # --- S3: static site bucket (Sprint 21 — CloudFront + static site) ---
