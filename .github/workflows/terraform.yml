@@ -12,8 +12,7 @@ on:
       - "infra/**"
       - ".github/workflows/**"
     # Path filter on push only — apply jobs run only when infra actually changes.
-    # App-only merges do not trigger apply (Lambda code is deployed via the zip
-    # created at plan/apply time from the app/ directory).
+    # App-only changes (app/**) are deployed by app-deploy.yml, not this workflow.
   workflow_dispatch:
 
 permissions:

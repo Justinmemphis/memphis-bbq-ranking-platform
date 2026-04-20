@@ -1,0 +1,150 @@
+name: App Deploy
+
+# Triggers when Lambda code or admin static files change on main.
+# terraform.yml handles infra-only changes; this workflow handles app/ changes.
+# Using terraform apply -target (not aws lambda update-function-code directly) so
+# Terraform state stays authoritative and admin S3 objects are covered in the same run.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+  workflow_dispatch:
+    # Manual trigger — useful for re-deploying without a code change.
+
+permissions:
+  id-token: write  # required for OIDC token exchange
+  contents: read
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Dev
+  # ---------------------------------------------------------------------------
+
+  deploy-dev:
+    name: Deploy (dev)
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: "~1.5"
+          # Required so 'terraform output' returns raw values, not wrapped in quotes.
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: infra/envs/dev
+        run: terraform init
+
+      - name: Terraform Apply (targeted — Lambda + admin static files)
+        working-directory: infra/envs/dev
+        # Targets all Lambda modules and admin S3 objects only.
+        # A no-op apply runs for targets with no content change (hash unchanged).
+        # Note: aws_s3_object resources use count, so [0] index is required.
+        # This assumes enable_cloudfront = true; if false, remove the S3 targets.
+        run: |
+          terraform apply -auto-approve -no-color \
+            -target=module.lambda_health \
+            -target=module.lambda_get_restaurants \
+            -target=module.lambda_get_restaurant_detail \
+            -target=module.lambda_get_leaderboard \
+            -target=module.lambda_submit_rating \
+            -target=module.lambda_admin_health \
+            -target=module.lambda_admin_list_users \
+            -target=module.lambda_admin_manage_user \
+            -target=module.lambda_admin_audit_log \
+            -target='aws_s3_object.admin_index_html[0]' \
+            -target='aws_s3_object.admin_js[0]' \
+            -target='aws_s3_object.admin_css[0]' \
+            -target='aws_s3_object.admin_config[0]'
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Smoke test — dev API Gateway health check
+        working-directory: infra/envs/dev
+        # A 200 or 401 both confirm API Gateway + Lambda are running.
+        # 401 is expected without a JWT; 5xx indicates a deployment failure.
+        run: |
+          API=$(terraform output -raw api_endpoint)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API}/v1/health")
+          echo "Health check status: ${STATUS}"
+          if [[ "${STATUS}" == 5* ]]; then
+            echo "ERROR: health endpoint returned ${STATUS} — deployment may be broken"
+            exit 1
+          fi
+          echo "OK: ${STATUS} (200=healthy, 401=up but unauthenticated — both acceptable)"
+
+  # ---------------------------------------------------------------------------
+  # Prod — only runs after dev succeeds
+  # ---------------------------------------------------------------------------
+
+  deploy-prod:
+    name: Deploy (prod)
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: [deploy-dev]
+    # Prod only deploys if dev passed — never deploy prod if dev is broken.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: "~1.5"
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: infra/envs/prod
+        run: terraform init
+
+      - name: Terraform Apply (targeted — Lambda + admin static files)
+        working-directory: infra/envs/prod
+        run: |
+          terraform apply -auto-approve -no-color \
+            -target=module.lambda_health \
+            -target=module.lambda_get_restaurants \
+            -target=module.lambda_get_restaurant_detail \
+            -target=module.lambda_get_leaderboard \
+            -target=module.lambda_submit_rating \
+            -target=module.lambda_admin_health \
+            -target=module.lambda_admin_list_users \
+            -target=module.lambda_admin_manage_user \
+            -target=module.lambda_admin_audit_log \
+            -target='aws_s3_object.admin_index_html[0]' \
+            -target='aws_s3_object.admin_js[0]' \
+            -target='aws_s3_object.admin_css[0]' \
+            -target='aws_s3_object.admin_config[0]'
+        env:
+          TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Smoke test — prod API Gateway health check
+        working-directory: infra/envs/prod
+        run: |
+          API=$(terraform output -raw api_endpoint)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API}/v1/health")
+          echo "Health check status: ${STATUS}"
+          if [[ "${STATUS}" == 5* ]]; then
+            echo "ERROR: health endpoint returned ${STATUS} — deployment may be broken"
+            exit 1
+          fi
+          echo "OK: ${STATUS} (200=healthy, 401=up but unauthenticated — both acceptable)"
