@@ -258,97 +258,13 @@ _Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.m
 
 **Goal:** CloudFront + WAF live, admin group + routes wired, audit log queryable, admin UI deployed. Closes out the majority of Phase 3 deliverables.
 
-_Completed sprint detail archived in [`docs/sprint-history.md`](sprint-history.md)._
+_All sprints complete. Merged via PR #38 (2026-04-20)._
 
----
-
-### Monday 2026-04-13 — Planning only (no sprint)
-
----
-
-### Tuesday 2026-04-14 — Skipped
-
----
-
-### Wednesday 2026-04-15 (Sprint 21 — CloudFront + S3 static site — 60 min)
-
-**Goal:** Deploy S3 static site behind CloudFront with OAC. Unblocks WAF CLOUDFRONT-scope association.
-
-- [ ] Add `infra/modules/static_site/` — S3 bucket (public access blocked) + CloudFront distribution + OAC
-- [ ] OAC: S3 only serves via CloudFront; no public bucket policy
-- [ ] `enable_cloudfront` flag: false in dev (cost), true in prod — decide during plan review
-- [ ] Deploy stub `index.html` ("Coming Soon") to S3
-- [ ] Wire module into `infra/envs/dev/main.tf` and `infra/envs/prod/main.tf`
-- [ ] `terraform plan` reviewed; CloudFront distribution + OAC in plan output
-
-**Definition of done:** CloudFront distribution live with S3 origin; OAC in place; `index.html` served via CloudFront URL.
-
----
-
-### Thursday 2026-04-16 (Sprint 22 — WAF re-scope to CLOUDFRONT — 45 min)
-
-**Goal:** Move WAF WebACL from REGIONAL to CLOUDFRONT scope; associate with CloudFront distribution. Resolves the deferred Sprint 17 WAF association gap.
-
-- [ ] Change WAF WebACL `scope = "CLOUDFRONT"` (must deploy in `us-east-1` — already our region)
-- [ ] Associate WAF WebACL with CloudFront distribution ARN
-- [ ] Remove `CKV2_AWS_31` skip if association is now resolvable (re-evaluate)
-- [ ] Dev and prod plan review — WAF associated in prod plan
-- [ ] Update `docs/adr/` if the REGIONAL→CLOUDFRONT scope change warrants a note
-
-**Definition of done:** Prod plan shows WAF WebACL (CLOUDFRONT scope) associated with CloudFront distribution. WAF association gap from Sprint 17 closed.
-
----
-
-### Friday 2026-04-17 (Sprint 23 — Cognito admin group + route guard — 45 min)
-
-**Goal:** Create `admin` Cognito group; implement server-side group check; add guarded placeholder route.
-
-- [ ] Add `admin` Cognito group resource to `infra/modules/cognito/` (both dev and prod)
-- [ ] Implement `get_caller_groups(event)` helper in `app/shared/auth.py` — calls `cognito-idp:AdminListGroupsForUser` using caller's `sub`
-- [ ] Add `/v1/admin/health` placeholder Lambda — returns 403 if caller not in `admin` group
-- [ ] Lambda IAM: `cognito-idp:AdminListGroupsForUser` on User Pool ARN
-- [ ] Wire `GET /v1/admin/health` route in Terraform with JWT authorizer
-- [ ] Smoke test: non-admin user gets 403; admin user gets 200
-
-**Definition of done:** `/v1/admin/health` returns 403 for non-admins and 200 for users in the `admin` Cognito group.
-
----
-
-### Saturday 2026-04-18 (Sprint 24 — Admin Lambda: list/manage users — 45 min)
-
-**Goal:** Wire admin user management endpoints backed by Cognito.
-
-- [ ] `admin_list_users` Lambda: `GET /v1/admin/users` — calls `cognito-idp:ListUsers`; admin group check
-- [ ] `admin_manage_user` Lambda: `POST /v1/admin/users/{sub}/action` — body: `{"action": "disable"|"enable"|"force_reset"}`; admin group check
-- [ ] Lambda IAM: `cognito-idp:ListUsers`, `AdminDisableUser`, `AdminEnableUser`, `AdminResetUserPassword`
-- [ ] Wire both routes in Terraform; JWT authorizer on both
-- [ ] Structured JSON logs with `requestId`, `userSub`, `route`
-
-**Definition of done:** Admin user list and action endpoints live in dev; non-admins get 403.
-
----
-
-### Sunday 2026-04-19 (Long sprint — Audit log endpoint + Admin UI + Threat Model v2)
-
-**Goal:** Close out Phase 3 — audit log queryable, admin UI live, threat model updated.
-
-Sprint 25 — Audit log endpoint:
-- [ ] `admin_audit_log` Lambda: `GET /v1/admin/audit-log?restaurant_id=X` — queries `rating_events` by `restaurant_id`; admin group check
-- [ ] Lambda IAM: `dynamodb:Query` on `rating_events` ARN
-- [ ] Wire route in Terraform; JWT authorizer; structured logs
-- [ ] Smoke test: submit rating → query audit log → event appears
-
-Admin UI:
-- [ ] `app/admin/` — `index.html`, `admin.js`, `style.css` (minimal, no build step)
-- [ ] On load: decode JWT from Cognito Hosted UI redirect; check `cognito:groups`; redirect to Hosted UI if not logged in or not admin
-- [ ] Pages: user list, user action buttons (disable/enable/reset), audit log viewer
-- [ ] Deploy to S3; served via CloudFront
-
-Threat model v2:
-- [ ] Update `docs/03-threat-model.md` — add WAF (CLOUDFRONT scope), admin group guard, audit log, structured logging, SSM decision
-- [ ] Every Phase 3 threat has a named, deployed control
-
-**Definition of done:** Audit log endpoint live; admin UI accessible at CloudFront URL; threat model v2 committed with all Phase 3 controls documented.
+- Sprint 21 (2026-04-15): CloudFront + S3 static site with OAC ✓ (PR #34)
+- Sprint 22 (2026-04-19): WAF re-scoped to CLOUDFRONT; associated with CloudFront via `web_acl_id` ✓
+- Sprint 23 (2026-04-19): `admin` Cognito group + `is_admin()` server-side guard; `GET /v1/admin/health` ✓
+- Sprint 24 (2026-04-19): `GET /v1/admin/users` + `POST /v1/admin/users/{sub}/action` ✓
+- Sprint 25 (2026-04-19): `GET /v1/admin/audit-log`; admin UI deployed to S3/CloudFront; threat model v2 ✓
 
 ---
 
