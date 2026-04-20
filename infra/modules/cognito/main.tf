@@ -106,6 +106,9 @@ resource "aws_cognito_user_pool_client" "this" {
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  # Required for the Hosted UI: tells it which IdP to offer on the login page.
+  # Without this, /login returns a 302 to /error immediately.
+  supported_identity_providers = ["COGNITO"]
 
   callback_urls = var.callback_urls
   logout_urls   = var.logout_urls
