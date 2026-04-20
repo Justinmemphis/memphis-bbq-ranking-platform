@@ -3,17 +3,14 @@
 # Why prod-only: AWS WAF WebACL costs ~$5/month in base fees regardless of traffic.
 # Dev runs without WAF intentionally — that tradeoff is documented in terraform.tfvars.
 #
-# Scope = REGIONAL: required for API Gateway, ALBs, and AppSync associations.
+# Scope = CLOUDFRONT: CloudFront distributions require CLOUDFRONT-scoped WebACLs.
+# HTTP API (API Gateway v2) cannot use aws_wafv2_web_acl_association — only REST API
+# (v1) stages are supported by that resource. CloudFront is the correct association point.
+# The WebACL must be deployed in us-east-1 for CLOUDFRONT scope (already our region).
 #
-# Association status: the WebACL and rules are provisioned but NOT yet associated
-# with any resource. AWS WAF does not support direct association with HTTP API
-# (API Gateway v2) stages — it only supports REST API (v1) stages. The /apis/
-# ARN format used by HTTP APIs is rejected by AssociateWebACL with
-# WAFInvalidParameterException regardless of ARN construction.
-#
-# Planned fix (Sprint 20): add a CloudFront distribution in front of the HTTP API.
-# WAF will be re-scoped to CLOUDFRONT and associated with that distribution.
-# The WebACL rules defined here will be reused; only scope and association change.
+# Association: the web_acl_arn output is passed to the static_site module, which sets
+# web_acl_id on the aws_cloudfront_distribution resource. No separate association resource
+# is needed — CloudFront reads the web_acl_id directly from its distribution config.
 #
 # Security design: default_action = allow. Rules define what to BLOCK.
 # Alternative (default block + allowlist) was rejected: too brittle for an API that
@@ -23,7 +20,7 @@ resource "aws_wafv2_web_acl" "main" {
   count = var.enable_waf ? 1 : 0
 
   name  = "${var.app_name}-${var.environment}-webacl"
-  scope = "REGIONAL"
+  scope = "CLOUDFRONT"
 
   default_action {
     allow {}
@@ -209,10 +206,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "main" {
   depends_on = [aws_cloudwatch_log_resource_policy.waf]
 }
 
-# --- WAF WebACL association ---
-# DEFERRED: AWS WAF does not support associating with HTTP API (v2) stages.
-# The aws_wafv2_web_acl_association resource is intentionally absent.
-#
-# Sprint 20 will add a CloudFront distribution in front of the API. At that point
-# this module will be updated to scope = CLOUDFRONT and the association will target
-# the CloudFront distribution ARN instead. The rules above require no changes.
+# --- WAF association ---
+# Association is handled in the static_site module via CloudFront's web_acl_id attribute.
+# This module exports web_acl_arn; the caller passes it to the static_site module.
+# No aws_wafv2_web_acl_association resource is needed for CLOUDFRONT-scope WebACLs.
