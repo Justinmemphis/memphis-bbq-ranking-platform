@@ -1,5 +1,7 @@
 # Terraform
 .terraform/
+infra/github-oidc/aws/
+infra/github-oidc/awscliv2.zip
 lambda-packages/
 *.tfstate
 *.tfstate.*
