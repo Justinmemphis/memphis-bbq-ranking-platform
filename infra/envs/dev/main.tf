@@ -320,10 +320,13 @@ module "alarms" {
     module.lambda_admin_audit_log.function_name,
   ]
 
-  api_gateway_id              = module.api.api_id
-  notification_email          = var.alarm_notification_email
-  submit_rating_function_name = module.lambda_submit_rating.function_name
-  rating_spike_threshold      = 50
+  api_gateway_id                = module.api.api_id
+  notification_email            = var.alarm_notification_email
+  submit_rating_function_name   = module.lambda_submit_rating.function_name
+  admin_audit_log_function_name = module.lambda_admin_audit_log.function_name
+  cognito_user_pool_id          = module.cognito.user_pool_id
+  cognito_user_pool_client_id   = module.cognito.user_pool_client_id
+  rating_spike_threshold        = 50
 }
 
 # --- WAF WebACL ---

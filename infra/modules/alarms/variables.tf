@@ -34,3 +34,18 @@ variable "rating_spike_threshold" {
   type        = number
   default     = 50
 }
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID. Used in the CloudWatch dashboard to display login frequency (AWS/Cognito SignInSuccesses metric requires both UserPool and UserPoolClient dimensions)."
+  type        = string
+}
+
+variable "cognito_user_pool_client_id" {
+  description = "Cognito User Pool App Client ID. Used alongside cognito_user_pool_id for the SignInSuccesses dashboard widget."
+  type        = string
+}
+
+variable "admin_audit_log_function_name" {
+  description = "Fully-qualified name of the admin_audit_log Lambda function. Used in the CloudWatch dashboard to display audit log query volume."
+  type        = string
+}
