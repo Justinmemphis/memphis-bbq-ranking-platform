@@ -8,9 +8,7 @@
 - Any change under `infra/` must go through a PR.
 
 **Git / GitHub:**
-- Claude may run `git add` and `git commit`.
-- Only the user runs `git push`.
-- Claude may open PRs with `gh pr create`.
+- Claude may run `git add`, `git commit`, `git push`, and `gh pr create`.
 - Only the user approves and merges PRs.
 - Doc-only changes (no code, no `infra/` files) may commit directly to main.
 
