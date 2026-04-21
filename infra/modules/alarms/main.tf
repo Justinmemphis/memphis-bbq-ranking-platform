@@ -41,6 +41,8 @@ locals {
   name_prefix = "${var.app_name}-${var.environment}"
 }
 
+data "aws_region" "current" {}
+
 # --- SNS topic ---
 # One topic per environment. All alarms publish here; subscribers receive all
 # alarm state changes (OK → ALARM and ALARM → OK).
@@ -271,6 +273,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "Request Rate"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
@@ -288,6 +291,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "5xx Error Rate %"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             period = 300
             metrics = [
               [{ expression = "100 * m_5xx / m_count", id = "error_rate", label = "Error Rate (%)" }],
@@ -307,6 +311,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "p99 Latency (ms)"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             period = 300
             metrics = [
               ["AWS/ApiGateway", "IntegrationLatency", "ApiId", var.api_gateway_id, "Stage", "$default", { stat = "p99" }]
@@ -324,6 +329,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "4xx / Throttles"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
@@ -344,6 +350,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "Logins"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
@@ -361,6 +368,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "Rating Submissions"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
@@ -378,6 +386,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "Audit Log Queries"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
@@ -398,6 +407,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           properties = {
             title  = "Lambda Errors"
             view   = "timeSeries"
+            region = data.aws_region.current.name
             stat   = "Sum"
             period = 300
             metrics = [
