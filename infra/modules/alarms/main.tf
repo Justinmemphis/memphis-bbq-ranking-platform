@@ -17,8 +17,9 @@
 #   - API Gateway alarms use the per-stage CloudWatch metrics published by HTTP
 #     API (v2). Metric names differ slightly from REST API (v1) — verified
 #     against AWS docs for HTTP API.
-#   - p99 latency threshold 3000 ms: conservative for a serverless cold-start
-#     baseline; tighten in Phase 4 once warm-path baseline is established.
+#   - p99 latency threshold 500 ms: aligns with the Phase 4 SLO target
+#     (p99 < 500 ms). evaluation_periods = 2 (10 min sustained) avoids false
+#     alarms on isolated cold-start spikes while catching degradation quickly.
 #   - treat_missing_data = "notBreaching": missing data means no traffic, not an
 #     error. Using "breaching" would fire alarms on idle dev environments
 #     (nights/weekends) and create alert fatigue.
@@ -109,14 +110,79 @@ resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
-# --- API Gateway: p99 latency ---
+# --- API Gateway: 5xx error rate (SLO: error rate < 1%) ---
+# Metric math: 100 * 5XXError / Count. Fires when >= 1% of requests return 5xx
+# over a 5-minute window.
+#
+# Design decisions:
+#   - Complements the absolute-count apigw_5xx alarm: the count alarm catches
+#     error bursts during low traffic (e.g. 5 errors, 6 total requests = 83% error
+#     rate) where the rate math might be noisy; the rate alarm catches sustained
+#     degradation at higher traffic volumes where 5 absolute errors might be < 1%.
+#   - treat_missing_data = "notBreaching": when Count = 0 (no traffic) the
+#     division is undefined; CloudWatch returns no data — not a breach.
+#   - evaluation_periods = 1: we want immediate signal on an SLO breach, not a
+#     sustained-period gate. The 15-min gate on the latency alarm is appropriate
+#     for cold-start noise; error rate spikes are actionable immediately.
+#
+# Security implication: a sudden spike in error rate can indicate a broken deploy,
+# a DynamoDB throttle, or an attempted exploit hitting unhandled input paths.
+# Cross-reference with Lambda error alarms and WAF logs.
+resource "aws_cloudwatch_metric_alarm" "apigw_error_rate" {
+  alarm_name          = "${local.name_prefix}-apigw-error-rate"
+  alarm_description   = "API Gateway 5xx error rate >= 1% over a 5-minute window (SLO breach). Check Lambda error alarms and CloudWatch Logs for root cause."
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  evaluation_periods  = 1
+  treat_missing_data  = "notBreaching"
+
+  metric_query {
+    id          = "error_rate"
+    expression  = "100 * m_5xx / m_count"
+    label       = "5xx Error Rate (%)"
+    return_data = true
+  }
+
+  metric_query {
+    id = "m_count"
+    metric {
+      namespace   = "AWS/ApiGateway"
+      metric_name = "Count"
+      dimensions = {
+        ApiId = var.api_gateway_id
+        Stage = "$default"
+      }
+      period = 300
+      stat   = "Sum"
+    }
+  }
+
+  metric_query {
+    id = "m_5xx"
+    metric {
+      namespace   = "AWS/ApiGateway"
+      metric_name = "5XXError"
+      dimensions = {
+        ApiId = var.api_gateway_id
+        Stage = "$default"
+      }
+      period = 300
+      stat   = "Sum"
+    }
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+}
+
+# --- API Gateway: p99 latency (SLO: p99 < 500 ms) ---
 # Metric: IntegrationLatency p99 — time from API GW handing off to Lambda
 # until Lambda returns a response. Includes cold start time.
-# Threshold: 3000 ms. evaluation_periods = 3 (15 min sustained) avoids false
-# alarms on isolated cold-start spikes; tighten once warm-path baseline is known.
+# Threshold: 500 ms — SLO target. evaluation_periods = 2 (10 min sustained)
+# avoids false alarms on isolated cold-start spikes while catching degradation quickly.
 resource "aws_cloudwatch_metric_alarm" "apigw_latency" {
   alarm_name        = "${local.name_prefix}-apigw-latency-p99"
-  alarm_description = "API Gateway p99 integration latency exceeded 3 s for 15 consecutive minutes. Check Lambda duration metrics and DynamoDB latency."
+  alarm_description = "API Gateway p99 integration latency exceeded 500 ms for 10 consecutive minutes (SLO breach). Check Lambda duration metrics and DynamoDB latency."
   namespace         = "AWS/ApiGateway"
   metric_name       = "IntegrationLatency"
   dimensions = {
@@ -125,8 +191,8 @@ resource "aws_cloudwatch_metric_alarm" "apigw_latency" {
   }
   extended_statistic  = "p99"
   period              = 300
-  evaluation_periods  = 3
-  threshold           = 3000
+  evaluation_periods  = 2
+  threshold           = 500
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
 
