@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq 'if (.tool_input.command // \"\") | test(\"terraform plan\") then {\"hookSpecificOutput\": {\"hookEventName\": \"PostToolUse\", \"additionalContext\": \"A terraform plan was just run. Invoke the @accountant agent on the plan output above to check whether any new or changed AWS resources are already accounted for in docs/04-cost-estimate.md.\"}} else empty end' 2>/dev/null || true",
+            "statusMessage": "Checking cost estimate..."
+          }
+        ]
+      }
+    ]
+  }
+}
