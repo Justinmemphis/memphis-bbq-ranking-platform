@@ -239,6 +239,201 @@ resource "aws_cloudwatch_metric_alarm" "rating_spike" {
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
+# --- CloudWatch Dashboard ---
+# Single ops dashboard per environment. Widgets are organized in four rows:
+#   Row 1 (y=0):  API Health — request rate, 5xx error rate %, p99 latency, 4xx/throttles
+#   Row 2 (y=6):  User Activity — logins (Cognito), rating submissions, audit log queries
+#   Row 3 (y=12): Lambda Errors — all monitored functions on one graph
+#   Row 4 (y=18): Alarm Status — live state of all CloudWatch alarms in this module
+#
+# Design decisions:
+#   - SLO reference lines (500ms latency, 1% error rate) are rendered as horizontal
+#     annotations so degradation is visually obvious before alarms fire.
+#   - Cognito SignInSuccesses requires both UserPool and UserPoolClient dimensions —
+#     without UserPoolClient the metric does not resolve in CloudWatch.
+#   - Dashboard cost: first 3 dashboards per account are free; $3/month each after that.
+#     At one dashboard per environment (dev + prod = 2 total), both are free.
+#   - Lambda errors widget spans the full 24-unit width so all function lines are
+#     visible without scrolling — useful during incident response.
+resource "aws_cloudwatch_dashboard" "main" {
+  dashboard_name = "${local.name_prefix}-ops"
+
+  dashboard_body = jsonencode({
+    widgets = concat(
+      # --- Row 1: API Health ---
+      [
+        {
+          type   = "metric"
+          x      = 0
+          y      = 0
+          width  = 6
+          height = 6
+          properties = {
+            title  = "Request Rate"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              ["AWS/ApiGateway", "Count", "ApiId", var.api_gateway_id, "Stage", "$default"]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        },
+        {
+          type   = "metric"
+          x      = 6
+          y      = 0
+          width  = 6
+          height = 6
+          properties = {
+            title  = "5xx Error Rate %"
+            view   = "timeSeries"
+            period = 300
+            metrics = [
+              [{ expression = "100 * m_5xx / m_count", id = "error_rate", label = "Error Rate (%)" }],
+              ["AWS/ApiGateway", "Count", "ApiId", var.api_gateway_id, "Stage", "$default", { id = "m_count", visible = false, stat = "Sum" }],
+              ["AWS/ApiGateway", "5XXError", "ApiId", var.api_gateway_id, "Stage", "$default", { id = "m_5xx", visible = false, stat = "Sum" }]
+            ]
+            yAxis       = { left = { min = 0, max = 100 } }
+            annotations = { horizontal = [{ value = 1, label = "SLO (1%)", color = "#d62728" }] }
+          }
+        },
+        {
+          type   = "metric"
+          x      = 12
+          y      = 0
+          width  = 6
+          height = 6
+          properties = {
+            title  = "p99 Latency (ms)"
+            view   = "timeSeries"
+            period = 300
+            metrics = [
+              ["AWS/ApiGateway", "IntegrationLatency", "ApiId", var.api_gateway_id, "Stage", "$default", { stat = "p99" }]
+            ]
+            yAxis       = { left = { min = 0 } }
+            annotations = { horizontal = [{ value = 500, label = "SLO (500ms)", color = "#d62728" }] }
+          }
+        },
+        {
+          type   = "metric"
+          x      = 18
+          y      = 0
+          width  = 6
+          height = 6
+          properties = {
+            title  = "4xx / Throttles"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              ["AWS/ApiGateway", "4XXError", "ApiId", var.api_gateway_id, "Stage", "$default"]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        }
+      ],
+      # --- Row 2: User Activity ---
+      [
+        {
+          type   = "metric"
+          x      = 0
+          y      = 6
+          width  = 8
+          height = 6
+          properties = {
+            title  = "Logins"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              ["AWS/Cognito", "SignInSuccesses", "UserPool", var.cognito_user_pool_id, "UserPoolClient", var.cognito_user_pool_client_id]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        },
+        {
+          type   = "metric"
+          x      = 8
+          y      = 6
+          width  = 8
+          height = 6
+          properties = {
+            title  = "Rating Submissions"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              ["AWS/Lambda", "Invocations", "FunctionName", var.submit_rating_function_name]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        },
+        {
+          type   = "metric"
+          x      = 16
+          y      = 6
+          width  = 8
+          height = 6
+          properties = {
+            title  = "Audit Log Queries"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              ["AWS/Lambda", "Invocations", "FunctionName", var.admin_audit_log_function_name]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        }
+      ],
+      # --- Row 3: Lambda Errors ---
+      [
+        {
+          type   = "metric"
+          x      = 0
+          y      = 12
+          width  = 24
+          height = 6
+          properties = {
+            title  = "Lambda Errors"
+            view   = "timeSeries"
+            stat   = "Sum"
+            period = 300
+            metrics = [
+              for fn in var.lambda_function_names : ["AWS/Lambda", "Errors", "FunctionName", fn]
+            ]
+            yAxis = { left = { min = 0 } }
+          }
+        }
+      ],
+      # --- Row 4: Alarm Status ---
+      [
+        {
+          type   = "alarm"
+          x      = 0
+          y      = 18
+          width  = 24
+          height = 4
+          properties = {
+            title = "Alarm Status"
+            alarms = concat(
+              [
+                aws_cloudwatch_metric_alarm.apigw_5xx.arn,
+                aws_cloudwatch_metric_alarm.apigw_error_rate.arn,
+                aws_cloudwatch_metric_alarm.apigw_latency.arn,
+                aws_cloudwatch_metric_alarm.apigw_throttles.arn,
+                aws_cloudwatch_metric_alarm.rating_spike.arn,
+              ],
+              [for k, v in aws_cloudwatch_metric_alarm.lambda_errors : v.arn]
+            )
+          }
+        }
+      ]
+    )
+  })
+}
+
 # --- API Gateway: throttle count ---
 # Metric: 4XXError with a note — HTTP API v2 does not publish a dedicated
 # "ThrottleCount" metric. Throttles appear as 429s counted in 4XXError.
