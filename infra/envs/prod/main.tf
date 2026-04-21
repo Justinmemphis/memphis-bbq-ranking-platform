@@ -428,12 +428,12 @@ module "alarms" {
     module.lambda_admin_audit_log.function_name,
   ]
 
-  api_gateway_id              = module.api.api_id
-  notification_email          = var.alarm_notification_email
-  submit_rating_function_name = module.lambda_submit_rating.function_name
+  api_gateway_id                = module.api.api_id
+  notification_email            = var.alarm_notification_email
+  submit_rating_function_name   = module.lambda_submit_rating.function_name
   admin_audit_log_function_name = module.lambda_admin_audit_log.function_name
-  cognito_user_pool_id        = module.cognito.user_pool_id
-  cognito_user_pool_client_id = module.cognito.user_pool_client_id
+  cognito_user_pool_id          = module.cognito.user_pool_id
+  cognito_user_pool_client_id   = module.cognito.user_pool_client_id
   # Prod threshold: 200 invocations in 5 min (40/min). Tune upward once a real
   # traffic baseline exists — start conservative to avoid missing early abuse signals.
   rating_spike_threshold = 200
