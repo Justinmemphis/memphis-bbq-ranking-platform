@@ -9,8 +9,8 @@
 
 **Git / GitHub:**
 - Claude may run `git add`, `git commit`, `git push`, and `gh pr create`.
+- All changes — including docs and config — go through a PR. Never commit directly to main.
 - Only the user approves and merges PRs.
-- Doc-only changes (no code, no `infra/` files) may commit directly to main.
 
 ## Project Identity
 
