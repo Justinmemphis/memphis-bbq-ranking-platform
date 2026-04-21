@@ -330,6 +330,20 @@ resource "aws_iam_role_policy" "github_actions" {
         ]
         Resource = "arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:bbq-*"
       },
+      # --- CloudWatch Dashboards (Phase 4) ---
+      # Terraform needs Put/Delete/Get to manage the ops dashboard.
+      # Dashboard ARNs omit region (global CloudWatch resource).
+      # aws_cloudwatch_dashboard also calls ListTagsForResource on creation.
+      {
+        Sid    = "CloudWatchDashboardsManage"
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutDashboard",
+          "cloudwatch:DeleteDashboards",
+          "cloudwatch:GetDashboard",
+        ]
+        Resource = "arn:aws:cloudwatch::${data.aws_caller_identity.current.account_id}:dashboard/bbq-*"
+      },
       # --- WAF v2 WebACL (Sprint 15 — prod-only) ---
       # Required for aws_wafv2_web_acl, aws_wafv2_web_acl_logging_configuration,
       # and aws_wafv2_web_acl_association resources.
