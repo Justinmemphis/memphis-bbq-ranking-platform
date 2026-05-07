@@ -16,6 +16,12 @@ permissions:
   id-token: write  # required for OIDC token exchange
   contents: read
 
+# Same group key as terraform.yml — queues behind any running Terraform apply
+# rather than racing for the DynamoDB state lock.
+concurrency:
+  group: terraform-state
+  cancel-in-progress: false
+
 jobs:
 
   # ---------------------------------------------------------------------------
