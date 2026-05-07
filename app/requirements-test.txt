@@ -1,0 +1,5 @@
+# Test-only dependencies — NOT included in the Lambda deployment package.
+# Install alongside app/requirements.txt in CI: pip install -r requirements.txt -r requirements-test.txt
+moto[dynamodb,cognito-idp]==5.0.28
+pytest==8.3.5
+pytest-cov==6.1.0
