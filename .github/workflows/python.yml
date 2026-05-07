@@ -55,3 +55,24 @@ jobs:
         # If a vuln has no fix, use --ignore-vuln <VULN-ID> with a comment
         # explaining why it is accepted — do not silently suppress.
         run: pip-audit -r app/requirements.txt --no-deps
+
+  test:
+    name: Unit Tests (pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        # Install both sets: Lambda runtime deps (boto3 etc.) and test-only deps
+        # (moto, pytest, pytest-cov).  Without requirements.txt, Lambda imports
+        # inside the handlers would fail at collection time.
+        run: pip install -r app/requirements.txt -r app/requirements-test.txt
+      - name: Run pytest
+        # working-directory must be app/ so that `from shared.auth import ...`
+        # and `from lambdas.<name>.handler import handler` resolve correctly —
+        # exactly as they do in the Lambda runtime.
+        working-directory: app
+        run: pytest

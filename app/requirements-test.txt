@@ -1,0 +1,6 @@
+# Test-only dependencies — NOT included in the Lambda deployment package.
+# Install alongside app/requirements.txt in CI: pip install -r requirements.txt -r requirements-test.txt
+moto[dynamodb,cognito-idp]==5.0.28
+joserfc>=0.9.0          # moto Cognito backend dependency; not declared in moto 5.0.28 extras
+pytest==8.3.5
+pytest-cov==6.1.0
