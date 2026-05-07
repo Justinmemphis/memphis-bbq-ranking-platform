@@ -189,7 +189,7 @@ All infrastructure is scaffolded and validated in dev first. When ready to flip 
 - [x] Basic load/stress test: k6; 29,288 reqs at ~54 req/s; both SLOs passed; results in `docs/runbooks/load-test-results.md`
 - [x] Chaos drill: broke `bbq-prod-submit-rating-additional` inline policy; confirmed 500; restored via `put-role-policy`; runbook at `docs/runbooks/iam-permission-break.md`
 - [x] Cost controls: AWS Budgets skipped (shared account, no cost allocation tags); teardown runbook at `docs/runbooks/teardown.md`
-- [ ] Runbook: incident response steps for the most likely failure modes (Lambda error spike, 5xx surge, alarm fires)
+- [x] Runbook: incident response steps for the most likely failure modes (Lambda error spike, 5xx surge, latency SLO breach, rating abuse, throttles) — `docs/runbooks/incident-response.md`
 
 **Tests (after prod is live):**
 - [ ] Unit tests: Lambda handler logic — happy path, auth rejection, invalid input, DynamoDB error cases
