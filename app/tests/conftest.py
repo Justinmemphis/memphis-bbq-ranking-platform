@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # that is resolved at the first actual DynamoDB API call.
 # ---------------------------------------------------------------------------
 _STUB_ENV = {
+    "AWS_DEFAULT_REGION": "us-east-1",
     "RESTAURANTS_TABLE": "stub-restaurants",
     "RATINGS_TABLE": "stub-ratings",
     "RATING_EVENTS_TABLE": "stub-rating-events",
