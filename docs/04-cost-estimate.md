@@ -83,12 +83,12 @@ Memphis BBQ Ranking Platform — Portfolio / Very Low Usage
 
 ## Cost Controls (implemented as part of Phase 4)
 
-- [ ] AWS Budget: alert at $10/month and $20/month
-- [ ] CloudWatch alarm on estimated charges
-- [ ] Log retention enforced in Terraform (dev: 14 days, prod: 60 days)
-- [ ] DynamoDB PAY_PER_REQUEST — no cost when idle
-- [ ] Lambda — no cost when idle
-- [ ] Teardown runbook: `terraform destroy` on dev environment between extended work pauses
+- [x] AWS Budget: skipped — account is a shared personal account with baseline spend above project thresholds; cost allocation tags would be required to isolate project spend, and the overhead is not justified for a portfolio project
+- [ ] CloudWatch alarm on estimated charges — skipped (same reason as above)
+- [x] Log retention enforced in Terraform (dev: 14 days, prod: 60 days)
+- [x] DynamoDB PAY_PER_REQUEST — no cost when idle
+- [x] Lambda — no cost when idle
+- [x] Teardown runbook: `docs/runbooks/teardown.md` — covers dev-only teardown between sessions and full project shutdown (Scenario A / Scenario B)
 
 ---
 
