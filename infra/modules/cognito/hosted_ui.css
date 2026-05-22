@@ -1,14 +1,24 @@
 /*
  * Cognito Hosted UI — Memphis BBQ theme
  *
- * Only the class names Cognito exposes can be targeted here. Layout is controlled
- * by AWS and cannot be changed. Background, colors, typography, and form chrome
- * are all customizable via the selectors below.
+ * CSS is validated against a strict allowlist by the SetUICustomization API.
+ * Only the classes present in AWS's official template are permitted.
+ * Source: https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_SetUICustomization.html
  *
- * Reference: https://docs.aws.amazon.com/cognito/latest/developerguide/hosted-ui-customization.html
+ * Complete confirmed allowlist (18 selectors):
+ *   .logo-customizable, .banner-customizable, .label-customizable,
+ *   .textDescription-customizable, .idpDescription-customizable,
+ *   .legalText-customizable, .submitButton-customizable,
+ *   .submitButton-customizable:hover, .errorMessage-customizable,
+ *   .inputField-customizable, .inputField-customizable:focus,
+ *   .idpButton-customizable, .idpButton-customizable:hover,
+ *   .socialButton-customizable, .redirect-customizable,
+ *   .passwordCheck-notValid-customizable, .passwordCheck-valid-customizable,
+ *   .background-customizable
  *
- * Confirmed NOT on Cognito's allowlist (InvalidParameterException if included):
- *   .modal-title, .textDescription
+ * Confirmed NOT on allowlist (InvalidParameterException if included):
+ *   .modal-title, .textDescription (wrong — must be .textDescription-customizable),
+ *   .signInCancelButton-customizable
  */
 
 /* Page background */
@@ -37,6 +47,33 @@
   font-weight: 600;
 }
 
+/* Descriptive copy beneath the form heading */
+.textDescription-customizable {
+  color: #888;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  display: block;
+}
+
+/* IdP provider description text */
+.idpDescription-customizable {
+  color: #888;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  display: block;
+}
+
+/* Small legal / footer text */
+.legalText-customizable {
+  color: #888;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+}
+
 /* Text inputs */
 .inputField-customizable {
   width: 100%;
@@ -47,13 +84,11 @@
   border-radius: 8px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.9rem;
-  padding: 0 12px;
 }
 
 .inputField-customizable:focus {
   border-color: #d4732a;
   outline: 0;
-  box-shadow: 0 0 0 2px rgba(212, 115, 42, 0.25);
 }
 
 /* Primary submit button */
@@ -68,6 +103,7 @@
   background-color: #d4732a;
   border: none;
   border-radius: 8px;
+  text-align: center;
 }
 
 .submitButton-customizable:hover {
@@ -81,13 +117,13 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.85rem;
   width: 100%;
-  background-color: rgba(224, 112, 112, 0.1);
+  background: rgba(224, 112, 112, 0.1);
   border: 1px solid #e07070;
   border-radius: 8px;
   color: #e07070;
 }
 
-/* IdP / federated sign-in buttons (Google, etc. — ready for Phase 6) */
+/* IdP / federated sign-in buttons (Google, etc. — ready for next sprint) */
 .idpButton-customizable {
   height: 40px;
   width: 100%;
@@ -107,7 +143,7 @@
   color: #e8e2d9;
 }
 
-/* Social button wrapper (wraps the IdP button icon + label) */
+/* Social button wrapper */
 .socialButton-customizable {
   border-radius: 8px;
   height: 40px;
@@ -125,14 +161,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.85rem;
   color: #888;
-}
-
-/* Cancel / secondary action link */
-.signInCancelButton-customizable {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.85rem;
-  color: #888;
-  text-decoration: underline;
 }
 
 /* Password strength indicators */
