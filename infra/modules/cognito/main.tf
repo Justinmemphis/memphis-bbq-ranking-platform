@@ -135,6 +135,21 @@ resource "aws_cognito_user_pool_client" "this" {
   }
 }
 
+# --- Hosted UI Customization ---
+# Applies the Memphis BBQ dark theme to the Cognito-managed sign-in / sign-up pages.
+# Only the class names Cognito exposes can be targeted (see hosted_ui.css).
+# client_id scopes the customization to this app client — the user pool default
+# (no client_id) is overridden per-client so future clients can differ.
+resource "aws_cognito_user_pool_ui_customization" "this" {
+  user_pool_id = aws_cognito_user_pool.this.id
+  client_id    = aws_cognito_user_pool_client.this.id
+
+  css = file("${path.module}/hosted_ui.css")
+
+  # The app client must exist before UI customization can reference it.
+  depends_on = [aws_cognito_user_pool_domain.this]
+}
+
 # --- Admin Group ---
 # Members of this group can access /v1/admin/* routes.
 # Group membership is checked server-side in each admin Lambda via
