@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/.terraform-plugin-cache
           key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/.terraform-plugin-cache
           key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
@@ -221,7 +221,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/.terraform-plugin-cache
           key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
@@ -273,7 +273,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Cache Terraform plugins
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/.terraform-plugin-cache
           key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
