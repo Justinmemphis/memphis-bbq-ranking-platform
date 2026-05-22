@@ -1,3 +1,18 @@
+# BOOTSTRAP MODULE — MANUAL APPLY REQUIRED
+#
+# This module creates the AWS OIDC provider and the IAM role that GitHub Actions
+# uses to authenticate with AWS. Because it provisions the very credentials that
+# CI depends on, it cannot be applied by CI itself.
+#
+# Any change to this file must be applied manually:
+#
+#   cd infra/github-oidc
+#   terraform init
+#   terraform plan   # review carefully — this controls CI's AWS permissions
+#   terraform apply
+#
+# After applying, re-run any failed CI workflow — it will pick up the new policy.
+
 terraform {
   required_version = ">= 1.5"
   required_providers {
