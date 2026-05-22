@@ -19,6 +19,7 @@
     <div id="status-msg"></div>
     <div class="tabs">
       <button class="tab active" data-tab="users" onclick="switchTab('users')">Users</button>
+      <button class="tab" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
       <button class="tab" data-tab="audit" onclick="switchTab('audit')">Audit Log</button>
     </div>
 
@@ -35,6 +36,40 @@
           </tr>
         </thead>
         <tbody id="users-tbody">
+          <tr><td colspan="5">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Restaurants panel -->
+    <div class="panel" id="panel-restaurants">
+      <form class="restaurant-form" onsubmit="createRestaurant(event)">
+        <h3>Add Restaurant</h3>
+        <div class="form-row">
+          <label>ID (slug)<input id="r-id" type="text" placeholder="paynes-bar-b-que" required></label>
+          <label>Name<input id="r-name" type="text" placeholder="Payne's Bar-B-Que" required></label>
+        </div>
+        <div class="form-row">
+          <label>Address<input id="r-address" type="text" placeholder="1762 Lamar Ave, Memphis, TN"></label>
+          <label>Neighborhood<input id="r-neighborhood" type="text" placeholder="Midtown"></label>
+        </div>
+        <div class="form-row">
+          <label>Style<input id="r-style" type="text" placeholder="Memphis dry rub"></label>
+          <label>Description<input id="r-description" type="text" placeholder="Short blurb"></label>
+        </div>
+        <button type="submit" class="form-submit">Create</button>
+      </form>
+      <table style="margin-top:1.5rem">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Neighborhood</th>
+            <th>Style</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="restaurants-tbody">
           <tr><td colspan="5">Loading…</td></tr>
         </tbody>
       </table>

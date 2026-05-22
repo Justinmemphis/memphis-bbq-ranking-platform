@@ -14,16 +14,19 @@ from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 
 import lambdas.submit_rating.handler as submit_handler
+import shared.leaderboard as leaderboard_module
 from lambdas.submit_rating.handler import handler
 from tests.conftest import make_event
 
 
 def _patch_all_tables(monkeypatch, dynamodb_tables):
-    """Convenience: patch all four module-level table objects at once."""
+    """Patch all module-level table objects in submit_rating and shared.leaderboard."""
     monkeypatch.setattr(submit_handler, "restaurants_table", dynamodb_tables["restaurants"])
     monkeypatch.setattr(submit_handler, "ratings_table", dynamodb_tables["ratings"])
     monkeypatch.setattr(submit_handler, "rating_events_table", dynamodb_tables["rating_events"])
-    monkeypatch.setattr(submit_handler, "leaderboard_snapshot_table",
+    # recompute_leaderboard() now lives in shared.leaderboard — patch its table refs too.
+    monkeypatch.setattr(leaderboard_module, "ratings_table", dynamodb_tables["ratings"])
+    monkeypatch.setattr(leaderboard_module, "leaderboard_snapshot_table",
                         dynamodb_tables["leaderboard_snapshot"])
 
 
