@@ -59,18 +59,10 @@ interviewers look for first. No live AWS needed — moto mocks DynamoDB.
 
 ---
 
-### 2. SNS Alarm End-to-End Verification
+### 2. SNS Alarm End-to-End Verification — COMPLETE
 
-**What:** Confirm the SNS email subscription is active and an alarm actually delivers
-email. Either trigger a real alarm (e.g. temporarily lower a threshold and hit the
-endpoint) or use `aws cloudwatch set-alarm-state` to force ALARM state.
-
-**Why:** The subscription was provisioned in Terraform but "pending confirmation" until
-the link in AWS's confirmation email is clicked. If that was missed, zero alert emails
-will ever arrive. This is a 15-minute manual check, not a code change.
-
-**Deliverable:** Note in `docs/runbooks/incident-response.md` confirming subscription
-is active and test alarm was received.
+Subscription confirmed and alarm email delivery verified manually (2026-05-07).
+`bbq-prod-alarms` SNS topic subscription is active.
 
 ---
 
