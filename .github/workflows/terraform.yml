@@ -115,6 +115,8 @@ jobs:
         uses: hashicorp/setup-terraform@v4.0.0
         with:
           terraform_version: "~1.5"
+          # Required so 'terraform output' returns raw values, not wrapped in quotes.
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: infra/envs/dev
@@ -125,6 +127,12 @@ jobs:
         run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Invalidate CloudFront cache
+        working-directory: infra/envs/dev
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
 
   # ---------------------------------------------------------------------------
   # IaC Security Scan
@@ -289,6 +297,8 @@ jobs:
         uses: hashicorp/setup-terraform@v4.0.0
         with:
           terraform_version: "~1.5"
+          # Required so 'terraform output' returns raw values, not wrapped in quotes.
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: infra/envs/prod
@@ -299,3 +309,9 @@ jobs:
         run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Invalidate CloudFront cache
+        working-directory: infra/envs/prod
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
