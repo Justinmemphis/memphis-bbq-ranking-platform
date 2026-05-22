@@ -40,11 +40,13 @@ module "cognito" {
   callback_urls = [
     "http://localhost",
     "http://localhost:3000/callback",
+    "https://${module.static_site.cloudfront_domain_name}/index.html",
     "https://${module.static_site.cloudfront_domain_name}/admin/index.html",
   ]
   logout_urls = [
     "http://localhost",
     "http://localhost:3000",
+    "https://${module.static_site.cloudfront_domain_name}/index.html",
     "https://${module.static_site.cloudfront_domain_name}/admin/index.html",
   ]
 }
@@ -267,14 +269,17 @@ module "api" {
     "GET /v1/restaurants" = {
       invoke_arn    = module.lambda_get_restaurants.invoke_arn
       function_name = module.lambda_get_restaurants.function_name
+      public        = true
     }
     "GET /v1/restaurants/{restaurant_id}" = {
       invoke_arn    = module.lambda_get_restaurant_detail.invoke_arn
       function_name = module.lambda_get_restaurant_detail.function_name
+      public        = true
     }
     "GET /v1/leaderboard" = {
       invoke_arn    = module.lambda_get_leaderboard.invoke_arn
       function_name = module.lambda_get_leaderboard.function_name
+      public        = true
     }
     "POST /v1/ratings" = {
       invoke_arn    = module.lambda_submit_rating.invoke_arn
@@ -362,6 +367,35 @@ resource "aws_s3_object" "index_html" {
   source       = "${path.root}/../../../static/index.html"
   content_type = "text/html"
   etag         = filemd5("${path.root}/../../../static/index.html")
+}
+
+# --- Public landing page: S3 deployment ---
+resource "aws_s3_object" "public_js" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "app.js"
+  source       = "${path.root}/../../../static/app.js"
+  content_type = "application/javascript"
+  etag         = filemd5("${path.root}/../../../static/app.js")
+}
+
+resource "aws_s3_object" "public_config" {
+  count        = var.enable_cloudfront ? 1 : 0
+  bucket       = module.static_site.s3_bucket_name
+  key          = "config.json"
+  content_type = "application/json"
+  content = jsonencode({
+    api_endpoint      = module.api.api_endpoint
+    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id = module.cognito.user_pool_client_id
+    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/index.html"
+  })
+  etag = md5(jsonencode({
+    api_endpoint      = module.api.api_endpoint
+    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id = module.cognito.user_pool_client_id
+    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/index.html"
+  }))
 }
 
 # --- Admin UI: S3 deployment ---

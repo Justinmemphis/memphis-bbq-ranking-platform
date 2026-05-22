@@ -132,11 +132,13 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 resource "aws_apigatewayv2_route" "this" {
   for_each = var.routes
 
-  api_id             = aws_apigatewayv2_api.this.id
-  route_key          = each.key
-  target             = "integrations/${aws_apigatewayv2_integration.lambda[each.key].id}"
-  authorization_type = var.jwt_authorizer != null ? "JWT" : "NONE"
-  authorizer_id      = var.jwt_authorizer != null ? aws_apigatewayv2_authorizer.jwt[0].id : null
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.lambda[each.key].id}"
+  # Routes marked public = true bypass the JWT authorizer even when one is configured.
+  # This enables anonymous read access on specific routes while keeping writes JWT-gated.
+  authorization_type = (var.jwt_authorizer != null && !each.value.public) ? "JWT" : "NONE"
+  authorizer_id      = (var.jwt_authorizer != null && !each.value.public) ? aws_apigatewayv2_authorizer.jwt[0].id : null
 }
 
 # --- Lambda invoke permissions ---
