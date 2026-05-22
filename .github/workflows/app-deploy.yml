@@ -84,6 +84,7 @@ jobs:
             -target=module.lambda_admin_create_restaurant \
             -target=module.lambda_admin_update_restaurant \
             -target=module.lambda_admin_delete_restaurant \
+            -target='aws_s3_object.index_html[0]' \
             -target='aws_s3_object.public_js[0]' \
             -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \
@@ -92,6 +93,12 @@ jobs:
             -target='aws_s3_object.admin_config[0]'
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Invalidate CloudFront cache
+        working-directory: infra/envs/dev
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
 
       - name: Smoke test — dev API Gateway health check
         working-directory: infra/envs/dev
@@ -163,6 +170,7 @@ jobs:
             -target=module.lambda_admin_create_restaurant \
             -target=module.lambda_admin_update_restaurant \
             -target=module.lambda_admin_delete_restaurant \
+            -target='aws_s3_object.index_html[0]' \
             -target='aws_s3_object.public_js[0]' \
             -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \
@@ -171,6 +179,12 @@ jobs:
             -target='aws_s3_object.admin_config[0]'
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+
+      - name: Invalidate CloudFront cache
+        working-directory: infra/envs/prod
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
 
       - name: Smoke test — prod API Gateway health check
         working-directory: infra/envs/prod
