@@ -105,6 +105,76 @@ async function userAction(sub, action) {
   if (ok) loadUsers();
 }
 
+// --- Restaurants Panel ---
+async function loadRestaurants() {
+  const tbody = document.getElementById("restaurants-tbody");
+  tbody.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
+  const { ok, data } = await apiCall("/v1/restaurants");
+  if (!ok) { tbody.innerHTML = `<tr><td colspan='5'>Error loading restaurants</td></tr>`; return; }
+  const list = data.restaurants || [];
+  if (!list.length) { tbody.innerHTML = "<tr><td colspan='5'>No restaurants yet</td></tr>"; return; }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td><code style="font-size:.85rem">${r.restaurant_id}</code></td>
+      <td>${r.name}</td>
+      <td>${r.neighborhood || "—"}</td>
+      <td>${r.style || "—"}</td>
+      <td>
+        <button class="action-btn btn-reset" onclick="promptUpdateRestaurant('${r.restaurant_id}','${(r.name || "").replace(/'/g, "\\'")}')">Edit</button>
+        <button class="action-btn btn-disable" onclick="deleteRestaurant('${r.restaurant_id}')">Delete</button>
+      </td>
+    </tr>`).join("");
+}
+
+async function createRestaurant(event) {
+  event.preventDefault();
+  const body = {
+    restaurant_id: document.getElementById("r-id").value.trim(),
+    name: document.getElementById("r-name").value.trim(),
+    address: document.getElementById("r-address").value.trim() || undefined,
+    neighborhood: document.getElementById("r-neighborhood").value.trim() || undefined,
+    style: document.getElementById("r-style").value.trim() || undefined,
+    description: document.getElementById("r-description").value.trim() || undefined,
+  };
+  // Strip undefined fields so the API doesn't receive empty strings.
+  Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+  const { ok, status, data } = await apiCall("/v1/admin/restaurants", "POST", body);
+  if (ok) {
+    showStatus(`Created: ${body.restaurant_id}`);
+    event.target.reset();
+    loadRestaurants();
+  } else {
+    showStatus(`Error ${status}: ${data.message || data.error || "unknown"}`);
+  }
+}
+
+async function promptUpdateRestaurant(restaurantId, currentName) {
+  const newName = prompt(`New name for ${restaurantId}:`, currentName);
+  if (newName === null || newName.trim() === "") return;
+  await updateRestaurant(restaurantId, { name: newName.trim() });
+}
+
+async function updateRestaurant(restaurantId, fields) {
+  const { ok, status, data } = await apiCall(`/v1/admin/restaurants/${encodeURIComponent(restaurantId)}`, "PUT", fields);
+  if (ok) {
+    showStatus(`Updated: ${restaurantId}`);
+    loadRestaurants();
+  } else {
+    showStatus(`Error ${status}: ${data.message || data.error || "unknown"}`);
+  }
+}
+
+async function deleteRestaurant(restaurantId) {
+  if (!confirm(`Delete "${restaurantId}" and ALL its ratings? This cannot be undone.`)) return;
+  const { ok, status, data } = await apiCall(`/v1/admin/restaurants/${encodeURIComponent(restaurantId)}`, "DELETE");
+  if (ok) {
+    showStatus(`Deleted: ${restaurantId}`);
+    loadRestaurants();
+  } else {
+    showStatus(`Error ${status}: ${data.message || data.error || "unknown"}`);
+  }
+}
+
 // --- Audit Log Panel ---
 async function loadAuditLog() {
   const restaurantId = document.getElementById("audit-restaurant-id").value.trim();
@@ -126,6 +196,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
   if (name === "users") loadUsers();
+  if (name === "restaurants") loadRestaurants();
 }
 
 // --- Logout ---

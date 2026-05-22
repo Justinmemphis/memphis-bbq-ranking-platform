@@ -301,6 +301,18 @@ module "api" {
       invoke_arn    = module.lambda_admin_audit_log.invoke_arn
       function_name = module.lambda_admin_audit_log.function_name
     }
+    "POST /v1/admin/restaurants" = {
+      invoke_arn    = module.lambda_admin_create_restaurant.invoke_arn
+      function_name = module.lambda_admin_create_restaurant.function_name
+    }
+    "PUT /v1/admin/restaurants/{restaurant_id}" = {
+      invoke_arn    = module.lambda_admin_update_restaurant.invoke_arn
+      function_name = module.lambda_admin_update_restaurant.function_name
+    }
+    "DELETE /v1/admin/restaurants/{restaurant_id}" = {
+      invoke_arn    = module.lambda_admin_delete_restaurant.invoke_arn
+      function_name = module.lambda_admin_delete_restaurant.function_name
+    }
   }
 }
 
@@ -323,6 +335,9 @@ module "alarms" {
     module.lambda_admin_list_users.function_name,
     module.lambda_admin_manage_user.function_name,
     module.lambda_admin_audit_log.function_name,
+    module.lambda_admin_create_restaurant.function_name,
+    module.lambda_admin_update_restaurant.function_name,
+    module.lambda_admin_delete_restaurant.function_name,
   ]
 
   api_gateway_id                = module.api.api_id
@@ -583,6 +598,145 @@ module "lambda_admin_health" {
   additional_policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Sid      = "ListGroupsForUser"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminListGroupsForUser"]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_create_restaurant ---
+# POST /v1/admin/restaurants — create a new restaurant entry. Admin-only.
+# IAM: PutItem on restaurants table + AdminListGroupsForUser.
+module "lambda_admin_create_restaurant" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-create-restaurant"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_create_restaurant.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+    RESTAURANTS_TABLE    = module.dynamodb.restaurants_table_name
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "CreateRestaurant"
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem"]
+        Resource = module.dynamodb.restaurants_table_arn
+      },
+      {
+        Sid      = "ListGroupsForUser"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminListGroupsForUser"]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_update_restaurant ---
+# PUT /v1/admin/restaurants/{restaurant_id} — update mutable fields. Admin-only.
+# IAM: GetItem + UpdateItem on restaurants table + AdminListGroupsForUser.
+module "lambda_admin_update_restaurant" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-update-restaurant"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_update_restaurant.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+    RESTAURANTS_TABLE    = module.dynamodb.restaurants_table_name
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "UpdateRestaurant"
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
+        Resource = module.dynamodb.restaurants_table_arn
+      },
+      {
+        Sid      = "ListGroupsForUser"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminListGroupsForUser"]
+        Resource = module.cognito.user_pool_arn
+      },
+    ]
+  })
+}
+
+# --- Lambda: admin_delete_restaurant ---
+# DELETE /v1/admin/restaurants/{restaurant_id} — hard-delete with cascade. Admin-only.
+# IAM flag: widest DynamoDB scope in the project — touches all four tables.
+# Each action is scoped to a specific table ARN; no Resource: "*".
+module "lambda_admin_delete_restaurant" {
+  source      = "../../modules/lambda"
+  app_name    = var.app_name
+  environment = var.environment
+
+  function_name      = "admin-delete-restaurant"
+  source_path        = "${path.root}/../../../app"
+  handler            = "lambdas.admin_delete_restaurant.handler.handler"
+  log_retention_days = 14
+
+  environment_vars = {
+    COGNITO_USER_POOL_ID       = module.cognito.user_pool_id
+    RESTAURANTS_TABLE          = module.dynamodb.restaurants_table_name
+    RATINGS_TABLE              = module.dynamodb.ratings_table_name
+    RATING_EVENTS_TABLE        = module.dynamodb.rating_events_table_name
+    LEADERBOARD_SNAPSHOT_TABLE = module.dynamodb.leaderboard_snapshot_table_name
+  }
+
+  create_additional_policy = true
+  additional_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "DeleteRestaurant"
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:DeleteItem"]
+        Resource = module.dynamodb.restaurants_table_arn
+      },
+      {
+        # Scan needed to find all ratings for restaurant_id (no GSI on that field).
+        # DeleteItem removes each matched rating.
+        Sid      = "CascadeDeleteRatings"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Scan", "dynamodb:DeleteItem"]
+        Resource = module.dynamodb.ratings_table_arn
+      },
+      {
+        Sid      = "CascadeDeleteRatingEvents"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query", "dynamodb:DeleteItem"]
+        Resource = module.dynamodb.rating_events_table_arn
+      },
+      {
+        # Query + DeleteItem for stale rank cleanup; BatchWriteItem for recompute write.
+        Sid      = "RewriteLeaderboard"
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query", "dynamodb:DeleteItem", "dynamodb:BatchWriteItem"]
+        Resource = module.dynamodb.leaderboard_snapshot_table_arn
+      },
       {
         Sid      = "ListGroupsForUser"
         Effect   = "Allow"

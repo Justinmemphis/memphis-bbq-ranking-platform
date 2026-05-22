@@ -71,6 +71,9 @@ jobs:
             -target=module.lambda_admin_list_users \
             -target=module.lambda_admin_manage_user \
             -target=module.lambda_admin_audit_log \
+            -target=module.lambda_admin_create_restaurant \
+            -target=module.lambda_admin_update_restaurant \
+            -target=module.lambda_admin_delete_restaurant \
             -target='aws_s3_object.public_js[0]' \
             -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \
@@ -138,6 +141,9 @@ jobs:
             -target=module.lambda_admin_list_users \
             -target=module.lambda_admin_manage_user \
             -target=module.lambda_admin_audit_log \
+            -target=module.lambda_admin_create_restaurant \
+            -target=module.lambda_admin_update_restaurant \
+            -target=module.lambda_admin_delete_restaurant \
             -target='aws_s3_object.public_js[0]' \
             -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \

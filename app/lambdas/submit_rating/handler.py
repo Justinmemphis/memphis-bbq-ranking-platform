@@ -11,9 +11,9 @@ Design decisions:
 - rating_events is append-only. Each submission writes a new event regardless
   of whether this is a create or update. created_at is ISO 8601 UTC, which is
   lexicographically sortable as the sort key.
-- Leaderboard recompute is an inline synchronous call (see _recompute_leaderboard).
-  The upgrade path to DynamoDB Streams → aggregator Lambda requires no data model
-  change — only the trigger mechanism changes.
+- Leaderboard recompute delegates to shared.leaderboard.recompute_leaderboard(),
+  which is also used by admin_delete_restaurant. The upgrade path to DynamoDB
+  Streams → aggregator Lambda requires no data model change — only the trigger.
 - score is validated as an integer in [1, 5] before touching DynamoDB.
   restaurant_id is validated as non-empty. No other fields are accepted —
   extra keys in the request body are silently ignored.
@@ -33,12 +33,11 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from decimal import Decimal
 
 import boto3
-from boto3.dynamodb.conditions import Key
 
 from shared.auth import get_user_sub
+from shared.leaderboard import recompute_leaderboard
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -48,22 +47,8 @@ dynamodb = boto3.resource("dynamodb")
 restaurants_table = dynamodb.Table(os.environ["RESTAURANTS_TABLE"])
 ratings_table = dynamodb.Table(os.environ["RATINGS_TABLE"])
 rating_events_table = dynamodb.Table(os.environ["RATING_EVENTS_TABLE"])
-leaderboard_snapshot_table = dynamodb.Table(os.environ["LEADERBOARD_SNAPSHOT_TABLE"])
 
 ROUTE = "POST /v1/ratings"
-
-# Leaderboard constants.
-LEADERBOARD_SCOPE = "memphis#all"
-
-# Bayesian average parameters.
-# C = prior weight: equivalent to this many "neutral" ratings anchoring toward the mean.
-# A small value (5) means a restaurant with just a few ratings won't rocket to the top,
-# but a restaurant with 20+ real ratings will converge toward its true mean.
-# m = prior mean: the neutral midpoint of the 1-5 scale.
-# Algorithm version is stored on each leaderboard item so future changes are traceable.
-BAYESIAN_C = Decimal("5")
-BAYESIAN_M = Decimal("3")
-ALGORITHM_VERSION = "bayesian-v1"
 
 
 def _error(status_code, message):
@@ -73,105 +58,6 @@ def _error(status_code, message):
         "body": json.dumps({"message": message}),
     }
 
-
-def _recompute_leaderboard():
-    """
-    Recomputes the leaderboard_snapshot table using a Bayesian average.
-
-    What it does:
-    1. Scans all ratings to aggregate count and sum per restaurant.
-    2. Computes Bayesian score: (C*m + sum) / (C + n) per restaurant.
-       This pulls low-count restaurants toward the prior mean rather than
-       letting a single 5-star rating dominate the top of the list.
-    3. Sorts descending by Bayesian score, assigns rank (1 = best).
-    4. Deletes stale leaderboard items (in case restaurant count shrinks).
-    5. Writes fresh ranked items to leaderboard_snapshot.
-
-    The scope key "memphis#all" is the partition for the full city leaderboard.
-    Future scopes (e.g., "memphis#bbq", "nashville#all") can be added without
-    changing this table's schema.
-
-    Inline call trade-off:
-    - Simple, no additional AWS services.
-    - Full table scan on ratings on every write — acceptable at MVP scale.
-    - DynamoDB Streams → Lambda upgrade path: replace this function call with
-      a stream-triggered Lambda; data model is unchanged.
-
-    Security: this function runs under submit_rating's IAM role, which is
-    scoped to Scan on ratings and Query/DeleteItem/PutItem on leaderboard_snapshot.
-    No other tables are accessible.
-    """
-    # Step 1: Scan all ratings and aggregate per restaurant.
-    # Scan is necessary because there is no GSI on restaurant_id for the ratings table.
-    # At MVP scale this is acceptable. The Streams upgrade eliminates the scan.
-    aggregates = {}  # {restaurant_id: {"n": count, "sum": Decimal(sum)}}
-
-    paginator_kwargs = {}
-    while True:
-        response = ratings_table.scan(
-            ProjectionExpression="restaurant_id, score",
-            **paginator_kwargs,
-        )
-        for item in response.get("Items", []):
-            rid = item["restaurant_id"]
-            score = Decimal(str(item["score"]))
-            if rid not in aggregates:
-                aggregates[rid] = {"n": 0, "sum": Decimal("0")}
-            aggregates[rid]["n"] += 1
-            aggregates[rid]["sum"] += score
-
-        last_key = response.get("LastEvaluatedKey")
-        if not last_key:
-            break
-        paginator_kwargs["ExclusiveStartKey"] = last_key
-
-    if not aggregates:
-        # No ratings yet — leaderboard stays empty.
-        return
-
-    # Step 2: Compute Bayesian score for each restaurant.
-    scored = []
-    for rid, agg in aggregates.items():
-        n = Decimal(str(agg["n"]))
-        total = agg["sum"]
-        bayesian_score = (BAYESIAN_C * BAYESIAN_M + total) / (BAYESIAN_C + n)
-        scored.append({
-            "restaurant_id": rid,
-            "bayesian_score": bayesian_score,
-            "rating_count": int(n),
-            "rating_sum": int(total),
-        })
-
-    # Step 3: Sort descending by Bayesian score; ties broken by more ratings.
-    scored.sort(key=lambda x: (x["bayesian_score"], x["rating_count"]), reverse=True)
-
-    version = datetime.now(timezone.utc).isoformat()
-
-    # Step 4: Delete existing leaderboard items so stale ranks are removed.
-    # Query (not Scan) — scope is the partition key, so this is efficient.
-    existing = leaderboard_snapshot_table.query(
-        KeyConditionExpression=Key("scope").eq(LEADERBOARD_SCOPE),
-        ProjectionExpression="#r",
-        ExpressionAttributeNames={"#r": "rank"},
-    )
-    for item in existing.get("Items", []):
-        leaderboard_snapshot_table.delete_item(
-            Key={"scope": LEADERBOARD_SCOPE, "rank": item["rank"]},
-        )
-
-    # Step 5: Write fresh ranked items.
-    # rank is 1-indexed (1 = best). Stored as a number (SK type N in schema).
-    with leaderboard_snapshot_table.batch_writer() as batch:
-        for i, entry in enumerate(scored, start=1):
-            batch.put_item(Item={
-                "scope": LEADERBOARD_SCOPE,
-                "rank": i,
-                "restaurant_id": entry["restaurant_id"],
-                "bayesian_score": entry["bayesian_score"].quantize(Decimal("0.0001")),
-                "rating_count": entry["rating_count"],
-                "algorithm_version": ALGORITHM_VERSION,
-                "version": version,
-            })
 
 
 def handler(event, context):
@@ -231,7 +117,7 @@ def handler(event, context):
 
         # Inline leaderboard recompute — Bayesian average over all ratings.
         # Upgrade path: swap this call for a DynamoDB Streams trigger; data model unchanged.
-        _recompute_leaderboard()
+        recompute_leaderboard()
 
         latency_ms = round((time.monotonic() - start) * 1000)
         logger.info(json.dumps({
