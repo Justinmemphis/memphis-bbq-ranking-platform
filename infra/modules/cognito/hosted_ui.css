@@ -6,6 +6,9 @@
  * are all customizable via the selectors below.
  *
  * Reference: https://docs.aws.amazon.com/cognito/latest/developerguide/hosted-ui-customization.html
+ *
+ * Confirmed NOT on Cognito's allowlist (InvalidParameterException if included):
+ *   .modal-title, .textDescription
  */
 
 /* Page background */
@@ -24,15 +27,6 @@
 .logo-customizable {
   max-width: 60%;
   max-height: 30%;
-}
-
-/* Descriptive copy beneath the heading */
-.textDescription {
-  color: #888;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.875rem;
-  padding-top: 6px;
-  padding-bottom: 6px;
 }
 
 /* Field labels */
