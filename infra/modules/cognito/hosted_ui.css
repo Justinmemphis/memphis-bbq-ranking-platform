@@ -21,16 +21,16 @@
  *   .signInCancelButton-customizable
  */
 
-/* Page background */
+/* Page background — warm parchment */
 .background-customizable {
-  background-color: #141414;
+  background-color: #fdf6ed;
 }
 
-/* Top banner strip (above the form card) */
+/* Top banner — deep brick red matching site header */
 .banner-customizable {
   padding: 20px 0 20px 10px;
-  background-color: #1e1e1e;
-  border-bottom: 1px solid #333;
+  background-color: #8b1a1a;
+  border-bottom: 3px solid #6b1010;
 }
 
 /* Logo sizing (used if a logo image is ever uploaded) */
@@ -41,7 +41,7 @@
 
 /* Field labels */
 .label-customizable {
-  color: #e8e2d9;
+  color: #2c1810;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   font-weight: 600;
@@ -49,7 +49,7 @@
 
 /* Descriptive copy beneath the form heading */
 .textDescription-customizable {
-  color: #888;
+  color: #8a6245;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   padding-top: 6px;
@@ -59,7 +59,7 @@
 
 /* IdP provider description text */
 .idpDescription-customizable {
-  color: #888;
+  color: #8a6245;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   padding-top: 6px;
@@ -69,7 +69,7 @@
 
 /* Small legal / footer text */
 .legalText-customizable {
-  color: #888;
+  color: #8a6245;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 12px;
 }
@@ -78,20 +78,20 @@
 .inputField-customizable {
   width: 100%;
   height: 40px;
-  color: #e8e2d9;
-  background-color: #272727;
-  border: 1px solid #333;
-  border-radius: 8px;
+  color: #2c1810;
+  background-color: #fff;
+  border: 1px solid #e0c9a8;
+  border-radius: 6px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
 }
 
 .inputField-customizable:focus {
-  border-color: #d4732a;
+  border-color: #c0392b;
   outline: 0;
 }
 
-/* Primary submit button */
+/* Primary submit button — BBQ red */
 .submitButton-customizable {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
@@ -100,14 +100,14 @@
   height: 40px;
   width: 100%;
   color: #fff;
-  background-color: #d4732a;
+  background-color: #c0392b;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   text-align: center;
 }
 
 .submitButton-customizable:hover {
-  background-color: #e8832a;
+  background-color: #a93226;
   color: #fff;
 }
 
@@ -117,10 +117,10 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   width: 100%;
-  background: rgba(224, 112, 112, 0.1);
-  border: 1px solid #e07070;
-  border-radius: 8px;
-  color: #e07070;
+  background: #fdecea;
+  border: 1px solid #f5b7b1;
+  border-radius: 6px;
+  color: #922b21;
 }
 
 /* IdP / federated sign-in buttons (Google, etc. — ready for next sprint) */
@@ -129,30 +129,30 @@
   width: 100%;
   text-align: center;
   margin-bottom: 15px;
-  color: #e8e2d9;
-  background-color: #272727;
-  border: 1px solid #333;
-  border-radius: 8px;
+  color: #2c1810;
+  background-color: #fff;
+  border: 1px solid #e0c9a8;
+  border-radius: 6px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
 }
 
 .idpButton-customizable:hover {
-  background-color: #333;
-  border-color: #555;
-  color: #e8e2d9;
+  background-color: #fef9f4;
+  border-color: #c0392b;
+  color: #2c1810;
 }
 
 /* Social button wrapper */
 .socialButton-customizable {
-  border-radius: 8px;
+  border-radius: 6px;
   height: 40px;
   margin-bottom: 15px;
   padding: 1px;
   text-align: left;
   width: 100%;
-  background-color: #272727;
-  border: 1px solid #333;
+  background-color: #fff;
+  border: 1px solid #e0c9a8;
 }
 
 /* "Back to sign in" and other redirect links */
@@ -160,18 +160,18 @@
   text-align: center;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
-  color: #888;
+  color: #8a6245;
 }
 
 /* Password strength indicators */
 .passwordCheck-notValid-customizable {
-  color: #e07070;
+  color: #922b21;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
 }
 
 .passwordCheck-valid-customizable {
-  color: #4caf7d;
+  color: #27704a;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
 }

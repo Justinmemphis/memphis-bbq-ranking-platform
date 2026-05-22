@@ -6,18 +6,18 @@
   <title>Best Memphis BBQ</title>
   <style>
     :root {
-      --bg: #141414;
-      --surface: #1e1e1e;
-      --surface2: #272727;
-      --border: #333;
-      --text: #e8e2d9;
-      --muted: #888;
-      --accent: #d4732a;
-      --accent-hover: #e8832a;
-      --gold: #f0c040;
-      --gold-dim: #8a6e20;
-      --green: #4caf7d;
-      --radius: 8px;
+      --bg: #fdf6ed;
+      --surface: #ffffff;
+      --surface2: #fef9f4;
+      --border: #e0c9a8;
+      --text: #2c1810;
+      --muted: #8a6245;
+      --accent: #c0392b;
+      --accent-hover: #a93226;
+      --gold: #d4860a;
+      --gold-dim: #e0c9a8;
+      --green: #27704a;
+      --radius: 6px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,10 +31,10 @@
       min-height: 100vh;
     }
 
-    /* Header */
+    /* Header — deep brick red, classic diner style */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      background: #8b1a1a;
+      border-bottom: 3px solid #6b1010;
       padding: 0 1.5rem;
     }
     .header-inner {
@@ -46,12 +46,12 @@
       gap: 1rem;
       padding: 1rem 0;
     }
-    .site-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
-    .site-title span { color: var(--accent); }
-    .tagline { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .site-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; color: #fff; }
+    .site-title span { color: #f5d78e; }
+    .tagline { font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-top: 2px; }
 
     .auth-area { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-    #user-email { font-size: 0.8rem; color: var(--muted); }
+    #user-email { font-size: 0.8rem; color: rgba(255,255,255,0.75); }
 
     button {
       border: none;
@@ -63,16 +63,16 @@
       transition: background 0.15s;
     }
     #auth-btn {
-      background: var(--accent);
-      color: #fff;
+      background: #f5d78e;
+      color: #2c1810;
     }
-    #auth-btn:hover { background: var(--accent-hover); }
+    #auth-btn:hover { background: #f0cb6a; }
     #auth-btn.logout {
       background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.45);
+      color: rgba(255,255,255,0.85);
     }
-    #auth-btn.logout:hover { border-color: var(--text); color: var(--text); }
+    #auth-btn.logout:hover { border-color: #fff; color: #fff; }
 
     /* Main layout */
     main {
@@ -87,10 +87,12 @@
     section h2 {
       font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--border);
     }
 
     /* Loading / error states */
@@ -99,30 +101,34 @@
       font-size: 0.9rem;
       padding: 1.5rem 0;
     }
-    .error-msg { color: #e07070; }
+    .error-msg { color: #b52a1e; }
 
     /* Leaderboard */
     #leaderboard-table {
       width: 100%;
       border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(44,24,16,0.08);
     }
     #leaderboard-table th {
       text-align: left;
       font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--muted);
-      padding: 0 0.75rem 0.5rem;
-      border-bottom: 1px solid var(--border);
+      color: #fff;
+      background: #8b1a1a;
+      padding: 0.6rem 0.75rem;
     }
-    #leaderboard-table th:first-child { padding-left: 0; }
+    #leaderboard-table th:first-child { padding-left: 1rem; }
     #leaderboard-table td {
       padding: 0.7rem 0.75rem;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
-    #leaderboard-table td:first-child { padding-left: 0; }
+    #leaderboard-table td:first-child { padding-left: 1rem; }
     #leaderboard-table tr:last-child td { border-bottom: none; }
     #leaderboard-table tr:hover td { background: var(--surface2); }
 
@@ -133,8 +139,8 @@
       width: 2.5rem;
     }
     .rank-1 { color: var(--gold); font-size: 1rem; }
-    .rank-2 { color: #c0c0c0; }
-    .rank-3 { color: #cd7f32; }
+    .rank-2 { color: #a0a0a0; }
+    .rank-3 { color: #b87333; }
 
     .score-cell {
       font-variant-numeric: tabular-nums;
@@ -142,16 +148,16 @@
     }
     .score-bar-wrap { display: flex; align-items: center; gap: 0.6rem; }
     .score-bar {
-      height: 4px;
+      height: 5px;
       background: var(--border);
-      border-radius: 2px;
+      border-radius: 3px;
       width: 60px;
       overflow: hidden;
     }
     .score-bar-fill {
       height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
+      background: var(--gold);
+      border-radius: 3px;
     }
     .rating-count { font-size: 0.75rem; color: var(--muted); }
 
@@ -169,10 +175,11 @@
       display: flex;
       flex-direction: column;
       gap: 0.6rem;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 3px rgba(44,24,16,0.06);
     }
-    .restaurant-card:hover { border-color: #555; }
-    .restaurant-name { font-weight: 700; font-size: 1rem; }
+    .restaurant-card:hover { border-color: #c0392b; box-shadow: 0 2px 8px rgba(44,24,16,0.12); }
+    .restaurant-name { font-weight: 700; font-size: 1rem; color: var(--text); }
     .restaurant-location { font-size: 0.8rem; color: var(--muted); }
 
     .card-badge {
@@ -185,7 +192,7 @@
       padding: 2px 7px;
       color: var(--muted);
     }
-    .card-badge.ranked { color: var(--accent); border-color: var(--accent); }
+    .card-badge.ranked { color: var(--accent); border-color: var(--accent); background: #fdf0ee; }
 
     /* Star rating */
     .rating-section { margin-top: 0.5rem; }
@@ -193,7 +200,7 @@
     .star {
       font-size: 1.3rem;
       cursor: pointer;
-      color: var(--border);
+      color: var(--gold-dim);
       line-height: 1;
       transition: color 0.1s, transform 0.1s;
       user-select: none;
@@ -225,7 +232,7 @@
       color: var(--green);
       min-height: 1.2em;
     }
-    .card-status.error { color: #e07070; }
+    .card-status.error { color: #b52a1e; }
 
     /* Footer */
     footer {
@@ -233,8 +240,9 @@
       padding: 2rem;
       font-size: 0.75rem;
       color: var(--muted);
-      border-top: 1px solid var(--border);
+      border-top: 2px solid var(--border);
       margin-top: 2rem;
+      background: var(--surface2);
     }
   </style>
 </head>
