@@ -19,12 +19,11 @@ The app is Memphis BBQ. The portfolio signal is production-grade cloud security 
 
 ---
 
-## Current Status — 2026-05-07
+## Current Status — 2026-05-22
 
-**Phase 4 (Operability + Resilience) is nearly complete.** Unit tests are the last
-active work item before Phase 5 (Portfolio Polish).
+**Phase 4 complete. Phase 5 (Portfolio Polish) is next.**
 
-Prod is fully live. CI keeps prod in sync on every merge to main. No manual apply ever needed.
+Prod is fully live with a real public UI. CI keeps prod in sync on every merge to main. No manual apply ever needed.
 
 ### What's done
 
@@ -33,7 +32,8 @@ Prod is fully live. CI keeps prod in sync on every merge to main. No manual appl
 | **Infra** | Terraform remote state, dev + prod environments, Lambda + API Gateway, DynamoDB (4 tables), Cognito user pools, S3 + CloudFront, WAF (CLOUDFRONT scope, OWASP rules + rate limit) |
 | **CI/CD** | GitHub Actions + OIDC (no static keys), `plan` on PR, `apply` on merge; app-only deploy workflow; checkov + pip-audit gating merges |
 | **API** | `GET /v1/health`, `GET /v1/restaurants`, `GET /v1/restaurants/{id}`, `GET /v1/leaderboard`, `POST /v1/ratings`; Bayesian average ranking; one rating per user per restaurant |
-| **Auth** | Cognito JWT on all routes; `sub` as stable identity; admin group with server-side guard; admin routes (`/v1/admin/`) |
+| **Auth** | Cognito JWT on write/admin routes; read routes public; `sub` as stable identity; admin group with server-side guard |
+| **Public UI** | Leaderboard + restaurant list; star rating with Cognito login redirect; dark BBQ-themed design; S3 + CloudFront |
 | **Admin UI** | Pure HTML/JS deployed to S3/CloudFront; Cognito Hosted UI login; user list, disable/enable, force password reset |
 | **Security** | SSM Parameter Store for secrets; structured JSON logs (no PII); `rating_events` audit log; threat model v2 |
 | **Observability** | 6 CloudWatch alarms (Lambda errors, 5xx count, error rate, p99 latency, throttles, rating spike); ops dashboard (`bbq-prod-ops`); load test passed both SLOs (p99=371ms, error rate=0.00%) |
@@ -47,15 +47,10 @@ Items are ordered by value delivered vs. effort. Do them in this sequence.
 
 ---
 
-### 1. Unit Tests + CI wiring — **IN PROGRESS**
+### 1. Unit Tests + CI wiring — COMPLETE
 
-**What:** pytest + moto for all 9 Lambda handlers. Happy path, auth rejection, invalid
-input, DynamoDB error cases. Tests wired into CI (run on every PR).
-
-**Why now:** Last active Phase 4 deliverable. Strong test coverage is the thing
-interviewers look for first. No live AWS needed — moto mocks DynamoDB.
-
-**Scope:** Unit tests only. Integration and infra tests deferred (see items 7 and 8).
+44 tests (pytest + moto) for all 9 Lambda handlers + shared auth. Wired into CI on
+every PR via `python.yml`. Merged 2026-05-07 (PR #53).
 
 ---
 
@@ -66,20 +61,13 @@ Subscription confirmed and alarm email delivery verified manually (2026-05-07).
 
 ---
 
-### 3. Public Landing Page
+### 3. Public Landing Page — COMPLETE
 
-**What:** Replace the stub `index.html` on `bbq-prod-static` with a real public-facing
-page. Minimum: restaurant list + leaderboard rendered from the live API. Users can
-browse and see rankings without logging in (read-only). Rating submission requires login
-(Cognito Hosted UI redirect).
-
-**Why:** Right now the only UI is the admin panel. A recruiter clicking the CloudFront
-URL sees a "Coming Soon" stub. A working public app — even simple HTML/JS — makes the
-portfolio tangible and demonstrates the full stack end-to-end.
-
-**Scope:** Pure HTML + vanilla JS, no build step (same pattern as admin UI). Read-only
-endpoints (`GET /restaurants`, `GET /leaderboard`) do not require a JWT today — confirm
-auth config before building. Rating submission flow needs Cognito login redirect.
+Merged 2026-05-22 (PR #56). Replaced "Coming Soon" stub with a full public landing
+page. `GET /v1/restaurants` and `GET /v1/leaderboard` opened to unauthenticated callers
+via per-route `public = true` flag in the `api_http` Terraform module. Rating
+submission redirects to Cognito Hosted UI (implicit grant, same pattern as admin UI).
+`POST /v1/ratings` and all `/v1/admin/*` routes remain JWT-gated.
 
 ---
 
