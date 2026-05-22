@@ -39,10 +39,19 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -58,7 +67,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/dev
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Format Check
         working-directory: infra/envs/dev
@@ -82,10 +91,19 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -100,7 +118,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/dev
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Apply
         working-directory: infra/envs/dev
@@ -118,7 +136,7 @@ jobs:
     name: IaC Security Scan (checkov)
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: [plan-dev, plan-prod]
+    # Static scan — no dependency on plans; runs in parallel to save wall-clock time.
 
     steps:
       - name: Checkout
@@ -195,10 +213,19 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: prod
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -213,7 +240,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/prod
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Format Check
         working-directory: infra/envs/prod
@@ -238,10 +265,19 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: prod
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -256,7 +292,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/prod
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Apply
         working-directory: infra/envs/prod
