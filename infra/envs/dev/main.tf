@@ -757,6 +757,11 @@ output "cloudfront_domain_name" {
   value       = module.static_site.cloudfront_domain_name
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID — used by app-deploy.yml to create cache invalidations"
+  value       = module.static_site.cloudfront_distribution_id
+}
+
 output "static_site_bucket" {
   description = "Static site S3 bucket name (empty when enable_cloudfront = false)"
   value       = module.static_site.s3_bucket_name

@@ -750,3 +750,8 @@ output "static_site_bucket" {
   description = "Static site S3 bucket name"
   value       = module.static_site.s3_bucket_name
 }
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID — used by app-deploy.yml to create cache invalidations"
+  value       = module.static_site.cloudfront_distribution_id
+}
