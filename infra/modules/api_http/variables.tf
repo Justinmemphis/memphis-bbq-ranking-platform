@@ -18,6 +18,9 @@ variable "routes" {
   type = map(object({
     invoke_arn    = string
     function_name = string
+    # public = true removes the JWT authorizer from this route, allowing unauthenticated
+    # callers. Use only for read-only endpoints where public access is intentional.
+    public = optional(bool, false)
   }))
 }
 

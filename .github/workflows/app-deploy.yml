@@ -54,9 +54,9 @@ jobs:
         working-directory: infra/envs/dev
         run: terraform init
 
-      - name: Terraform Apply (targeted — Lambda + admin static files)
+      - name: Terraform Apply (targeted — Lambda + static files)
         working-directory: infra/envs/dev
-        # Targets all Lambda modules and admin S3 objects only.
+        # Targets all Lambda modules and S3 objects only.
         # A no-op apply runs for targets with no content change (hash unchanged).
         # Note: aws_s3_object resources use count, so [0] index is required.
         # This assumes enable_cloudfront = true; if false, remove the S3 targets.
@@ -71,6 +71,8 @@ jobs:
             -target=module.lambda_admin_list_users \
             -target=module.lambda_admin_manage_user \
             -target=module.lambda_admin_audit_log \
+            -target='aws_s3_object.public_js[0]' \
+            -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \
             -target='aws_s3_object.admin_js[0]' \
             -target='aws_s3_object.admin_css[0]' \
@@ -123,7 +125,7 @@ jobs:
         working-directory: infra/envs/prod
         run: terraform init
 
-      - name: Terraform Apply (targeted — Lambda + admin static files)
+      - name: Terraform Apply (targeted — Lambda + static files)
         working-directory: infra/envs/prod
         run: |
           terraform apply -auto-approve -no-color \
@@ -136,6 +138,8 @@ jobs:
             -target=module.lambda_admin_list_users \
             -target=module.lambda_admin_manage_user \
             -target=module.lambda_admin_audit_log \
+            -target='aws_s3_object.public_js[0]' \
+            -target='aws_s3_object.public_config[0]' \
             -target='aws_s3_object.admin_index_html[0]' \
             -target='aws_s3_object.admin_js[0]' \
             -target='aws_s3_object.admin_css[0]' \
