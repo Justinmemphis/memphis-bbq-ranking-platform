@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "static/**"   # public landing page JS/HTML live outside app/ but deploy via S3
   workflow_dispatch:
     # Manual trigger — useful for re-deploying without a code change.
 
@@ -32,10 +33,19 @@ jobs:
     name: Deploy (dev)
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -52,7 +62,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/dev
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Apply (targeted — Lambda + static files)
         working-directory: infra/envs/dev
@@ -107,10 +117,19 @@ jobs:
     environment: prod
     needs: [deploy-dev]
     # Prod only deploys if dev passed — never deploy prod if dev is broken.
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.terraform-plugin-cache
+          key: tf-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: tf-plugins-${{ runner.os }}-
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -126,7 +145,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/envs/prod
-        run: terraform init
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR && terraform init
 
       - name: Terraform Apply (targeted — Lambda + static files)
         working-directory: infra/envs/prod
