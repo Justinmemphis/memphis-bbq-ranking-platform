@@ -2,7 +2,7 @@
 
 Memphis BBQ Ranking Platform — DevSecOps Portfolio Project
 
-**Last updated:** 2026-05-07
+**Last updated:** 2026-05-22
 
 ---
 
@@ -21,9 +21,9 @@ The app is Memphis BBQ. The portfolio signal is production-grade cloud security 
 
 ## Current Status — 2026-05-22
 
-**Phase 4 complete. Phase 5 (Portfolio Polish) is next.**
+**Restaurant Admin CRUD complete. Next: per-user rate limiting or portfolio polish.**
 
-Prod is fully live with a real public UI. CI keeps prod in sync on every merge to main. No manual apply ever needed.
+Prod is fully live with a real public UI and self-maintaining admin CRUD. CI keeps prod in sync on every merge to main. No manual apply ever needed.
 
 ### What's done
 
@@ -34,7 +34,7 @@ Prod is fully live with a real public UI. CI keeps prod in sync on every merge t
 | **API** | `GET /v1/health`, `GET /v1/restaurants`, `GET /v1/restaurants/{id}`, `GET /v1/leaderboard`, `POST /v1/ratings`; Bayesian average ranking; one rating per user per restaurant |
 | **Auth** | Cognito JWT on write/admin routes; read routes public; `sub` as stable identity; admin group with server-side guard |
 | **Public UI** | Leaderboard + restaurant list; star rating with Cognito login redirect; dark BBQ-themed design; S3 + CloudFront |
-| **Admin UI** | Pure HTML/JS deployed to S3/CloudFront; Cognito Hosted UI login; user list, disable/enable, force password reset |
+| **Admin UI** | Pure HTML/JS deployed to S3/CloudFront; Cognito Hosted UI login; user list, disable/enable, force password reset; restaurant CRUD (create, edit, delete with cascade) |
 | **Security** | SSM Parameter Store for secrets; structured JSON logs (no PII); `rating_events` audit log; threat model v2 |
 | **Observability** | 6 CloudWatch alarms (Lambda errors, 5xx count, error rate, p99 latency, throttles, rating spike); ops dashboard (`bbq-prod-ops`); load test passed both SLOs (p99=371ms, error rate=0.00%) |
 | **Operability** | IAM chaos drill + runbook; incident response runbook (5 scenarios); teardown runbook (dev + full shutdown) |
@@ -71,18 +71,14 @@ submission redirects to Cognito Hosted UI (implicit grant, same pattern as admin
 
 ---
 
-### 4. Restaurant Admin CRUD
+### 4. Restaurant Admin CRUD — COMPLETE
 
-**What:** Add create/edit/delete restaurant endpoints (`POST /v1/admin/restaurants`,
-`PUT /v1/admin/restaurants/{id}`, `DELETE /v1/admin/restaurants/{id}`) and wire them
-into the admin UI. Currently restaurants can only be added via direct DynamoDB writes.
-
-**Why:** Closes the last gap in the admin capability. Required for the project to be
-self-maintaining — you can't demo adding a new restaurant without console access today.
-Also adds three more Lambda functions with test coverage opportunities.
-
-**Scope:** New Lambda handlers + new API routes + admin UI additions + IAM update +
-unit tests for new handlers.
+Merged 2026-05-22 (PR #58). `POST /v1/admin/restaurants`, `PUT /v1/admin/restaurants/{id}`,
+`DELETE /v1/admin/restaurants/{id}` — all admin-group-guarded. Cascade delete clears
+ratings, rating_events, and rewrites the leaderboard snapshot. `shared/leaderboard.py`
+extracted so submit_rating and admin_delete_restaurant share one recompute implementation.
+69 unit tests via moto. Admin UI gains a Restaurants tab with create form, edit, and
+delete-with-confirm.
 
 ---
 
