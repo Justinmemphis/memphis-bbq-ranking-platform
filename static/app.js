@@ -276,7 +276,7 @@ function buildRestaurantCard(restaurant, rank) {
     <div class="rating-section">
       <div class="stars" id="stars-${rid}">
         ${[1,2,3,4,5].map(n =>
-          `<span class="star" data-rid="${rid}" data-score="${n}" onclick="selectStar('${rid}', ${n})">★</span>`
+          `<span class="star" data-rid="${rid}" data-score="${n}" onclick="selectStar('${rid}', ${n})" onmouseover="hoverStar('${rid}', ${n})" onmouseout="unhoverStar('${rid}')">★</span>`
         ).join("")}
       </div>
       <button class="${submitClass}" data-rid="${rid}" onclick="handleSubmit('${rid}')" ${isAuthed ? "disabled" : ""}>${submitLabel}</button>
@@ -285,6 +285,18 @@ function buildRestaurantCard(restaurant, rank) {
   `;
 
   return card;
+}
+
+function hoverStar(rid, score) {
+  document.querySelectorAll(`#stars-${rid} .star`).forEach(star => {
+    star.classList.toggle("hover", Number(star.dataset.score) <= score);
+  });
+}
+
+function unhoverStar(rid) {
+  document.querySelectorAll(`#stars-${rid} .star`).forEach(star => {
+    star.classList.remove("hover");
+  });
 }
 
 function selectStar(rid, score) {
