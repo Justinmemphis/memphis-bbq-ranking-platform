@@ -256,6 +256,10 @@ resource "aws_iam_role_policy" "github_actions" {
           "cognito-idp:GetGroup",
           "cognito-idp:UpdateGroup",
           "cognito-idp:ListGroups",
+          # Hosted UI CSS customization (aws_cognito_user_pool_ui_customization).
+          # GetUICustomization is required for Terraform to read state after apply.
+          "cognito-idp:SetUICustomization",
+          "cognito-idp:GetUICustomization",
         ]
         Resource = "arn:aws:cognito-idp:us-east-1:${data.aws_caller_identity.current.account_id}:userpool/*"
       },
