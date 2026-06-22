@@ -41,3 +41,16 @@ variable "enable_cloudfront" {
   type        = bool
   default     = true
 }
+
+variable "google_maps_api_key" {
+  description = <<-EOT
+    Google Maps Embed API key for the public frontend. Maps Embed API is $0/load.
+    NOT set here — pass via environment variable to keep the key out of git:
+      export TF_VAR_google_maps_api_key="AIza..."
+    Key must be restricted to HTTP referrers (CloudFront domain) and scoped to
+    the Maps Embed API only in the Google Cloud Console.
+  EOT
+  type      = string
+  default   = ""
+  sensitive = true
+}

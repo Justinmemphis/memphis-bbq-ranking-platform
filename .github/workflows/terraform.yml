@@ -82,6 +82,7 @@ jobs:
         run: terraform plan -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+          TF_VAR_google_maps_api_key: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
   apply-dev:
     name: Apply (dev)
@@ -127,6 +128,7 @@ jobs:
         run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+          TF_VAR_google_maps_api_key: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
       - name: Invalidate CloudFront cache
         working-directory: infra/envs/dev
@@ -263,6 +265,7 @@ jobs:
         run: terraform plan -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+          TF_VAR_google_maps_api_key: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
   apply-prod:
     name: Apply (prod)
@@ -309,6 +312,7 @@ jobs:
         run: terraform apply -auto-approve -no-color
         env:
           TF_VAR_alarm_notification_email: ${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+          TF_VAR_google_maps_api_key: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
       - name: Invalidate CloudFront cache
         working-directory: infra/envs/prod

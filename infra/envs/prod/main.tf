@@ -656,16 +656,18 @@ resource "aws_s3_object" "public_config" {
   key          = "config.json"
   content_type = "application/json"
   content = jsonencode({
-    api_endpoint      = module.api.api_endpoint
-    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
-    cognito_client_id = module.cognito.user_pool_client_id
-    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/index.html"
+    api_endpoint        = module.api.api_endpoint
+    cognito_domain      = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id   = module.cognito.user_pool_client_id
+    redirect_uri        = "https://${module.static_site.cloudfront_domain_name}/index.html"
+    google_maps_api_key = var.google_maps_api_key
   })
   etag = md5(jsonencode({
-    api_endpoint      = module.api.api_endpoint
-    cognito_domain    = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
-    cognito_client_id = module.cognito.user_pool_client_id
-    redirect_uri      = "https://${module.static_site.cloudfront_domain_name}/index.html"
+    api_endpoint        = module.api.api_endpoint
+    cognito_domain      = "${var.cognito_domain_prefix}.auth.us-east-1.amazoncognito.com"
+    cognito_client_id   = module.cognito.user_pool_client_id
+    redirect_uri        = "https://${module.static_site.cloudfront_domain_name}/index.html"
+    google_maps_api_key = var.google_maps_api_key
   }))
 }
 

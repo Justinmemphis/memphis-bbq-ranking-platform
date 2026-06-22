@@ -38,7 +38,10 @@ COGNITO_USER_POOL_ID = os.environ["COGNITO_USER_POOL_ID"]
 ROUTE = "PUT /v1/admin/restaurants/{restaurant_id}"
 
 IMMUTABLE_FIELDS = {"restaurant_id", "created_at"}
-MUTABLE_FIELDS = {"name", "address", "neighborhood", "style", "description"}
+MUTABLE_FIELDS = {"name", "address", "neighborhood", "style", "description", "phone", "website"}
+
+# lat/lng stored as decimal strings; validated as real numbers before storage.
+COORDINATE_FIELDS = {"lat", "lng"}
 
 dynamodb = boto3.resource("dynamodb")
 restaurants_table = dynamodb.Table(os.environ["RESTAURANTS_TABLE"])
@@ -80,8 +83,19 @@ def handler(event, context):
             if val:
                 update_fields[field] = val
 
+    for field in COORDINATE_FIELDS:
+        if field in body:
+            val = body[field]
+            if val is not None and str(val).strip():
+                try:
+                    float(val)
+                    update_fields[field] = str(val).strip()
+                except (ValueError, TypeError):
+                    return _error(400, f"'{field}' must be a valid decimal number (e.g. 35.1495)")
+
+    all_updatable = sorted(MUTABLE_FIELDS | COORDINATE_FIELDS)
     if not update_fields:
-        return _error(400, f"request must include at least one updatable field: {sorted(MUTABLE_FIELDS)}")
+        return _error(400, f"request must include at least one updatable field: {all_updatable}")
 
     update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
 

@@ -117,6 +117,45 @@ def test_create_success(monkeypatch, dynamodb_tables):
     assert item["name"] == "New BBQ Spot"
 
 
+def test_create_with_all_fields(monkeypatch, dynamodb_tables):
+    monkeypatch.setattr(create_handler, "COGNITO_USER_POOL_ID", "test-pool-id")
+    _patch_table(monkeypatch, dynamodb_tables)
+    with patch("lambdas.admin_create_restaurant.handler.is_admin", return_value=True):
+        response = handler(
+            _admin_event({
+                "restaurant_id": "full-bbq",
+                "name": "Full BBQ",
+                "address": "456 Beale St",
+                "neighborhood": "Downtown",
+                "phone": "901-555-0100",
+                "website": "https://fullbbq.com",
+                "style": "dry rub",
+                "description": "Famous for ribs.",
+                "lat": "35.1495",
+                "lng": "-90.0490",
+            }),
+            {},
+        )
+    assert response["statusCode"] == 201
+    body = json.loads(response["body"])
+    assert body["phone"] == "901-555-0100"
+    assert body["website"] == "https://fullbbq.com"
+    assert body["lat"] == "35.1495"
+    assert body["lng"] == "-90.0490"
+
+
+def test_create_invalid_lat(monkeypatch, dynamodb_tables):
+    monkeypatch.setattr(create_handler, "COGNITO_USER_POOL_ID", "test-pool-id")
+    _patch_table(monkeypatch, dynamodb_tables)
+    with patch("lambdas.admin_create_restaurant.handler.is_admin", return_value=True):
+        response = handler(
+            _admin_event({"restaurant_id": "bad-coords", "name": "X", "lat": "not-a-number"}),
+            {},
+        )
+    assert response["statusCode"] == 400
+    assert "lat" in json.loads(response["body"])["message"].lower()
+
+
 def test_create_duplicate(monkeypatch, dynamodb_tables):
     monkeypatch.setattr(create_handler, "COGNITO_USER_POOL_ID", "test-pool-id")
     _patch_table(monkeypatch, dynamodb_tables)
