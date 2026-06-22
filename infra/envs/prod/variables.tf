@@ -50,7 +50,7 @@ variable "google_maps_api_key" {
     Key must be restricted to HTTP referrers (CloudFront domain) and scoped to
     the Maps Embed API only in the Google Cloud Console.
   EOT
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
 }
