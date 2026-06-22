@@ -13,6 +13,15 @@ class Restaurant:
     restaurant_id: str  # stable slug, e.g. "paynes-bar-b-que" — never changes
     name: str
     location: str
+    # Optional detail fields — all stored as strings in DynamoDB
+    address: str = ""
+    neighborhood: str = ""
+    phone: str = ""
+    website: str = ""
+    style: str = ""          # e.g. "dry rub", "whole hog", "ribs"
+    description: str = ""
+    lat: str = ""            # decimal string, e.g. "35.1495"
+    lng: str = ""            # decimal string, e.g. "-90.0490"
     metadata: dict = field(default_factory=dict)
 
 

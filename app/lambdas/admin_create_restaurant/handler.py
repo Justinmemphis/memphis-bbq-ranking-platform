@@ -43,7 +43,11 @@ ROUTE = "POST /v1/admin/restaurants"
 # Lowercase alphanumeric + hyphens, no leading/trailing hyphens, min 3 chars.
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9\-]+[a-z0-9]$")
 
-MUTABLE_FIELDS = {"address", "neighborhood", "style", "description"}
+MUTABLE_FIELDS = {"address", "neighborhood", "style", "description", "phone", "website"}
+
+# lat/lng are stored as decimal strings ("35.1495") to keep json.dumps simple.
+# Validated as real numbers before storage; rejected if non-numeric.
+COORDINATE_FIELDS = {"lat", "lng"}
 
 dynamodb = boto3.resource("dynamodb")
 restaurants_table = dynamodb.Table(os.environ["RESTAURANTS_TABLE"])
@@ -94,6 +98,15 @@ def handler(event, context):
         val = str(body.get(field, "")).strip()
         if val:
             item[field] = val
+
+    for field in COORDINATE_FIELDS:
+        val = body.get(field)
+        if val is not None and str(val).strip():
+            try:
+                float(val)
+                item[field] = str(val).strip()
+            except (ValueError, TypeError):
+                return _error(400, f"'{field}' must be a valid decimal number (e.g. 35.1495)")
 
     try:
         restaurants_table.put_item(

@@ -48,14 +48,25 @@ async function init() {
 
   updateAuthUI();
 
-  // Fetch public data — no auth header needed.
+  const restaurantId = new URLSearchParams(window.location.search).get("restaurant");
+  if (restaurantId) {
+    await renderDetailPage(restaurantId);
+  } else {
+    await renderHomePage();
+  }
+}
+
+async function renderHomePage() {
   const [restaurants, leaderboard] = await Promise.all([
     fetchRestaurants(),
     fetchLeaderboard(),
   ]);
-
   renderLeaderboard(leaderboard, restaurants);
   renderRestaurants(restaurants, leaderboard);
+}
+
+function goHome() {
+  window.location.href = window.location.pathname;
 }
 
 async function loadConfig() {
@@ -173,6 +184,121 @@ async function fetchLeaderboard() {
   }
 }
 
+async function fetchRestaurantDetail(restaurantId) {
+  const resp = await fetch(`${CONFIG.api_endpoint}/v1/restaurants/${encodeURIComponent(restaurantId)}`);
+  if (resp.status === 404) throw new Error("Restaurant not found.");
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
+}
+
+// --- Detail page ---
+
+async function renderDetailPage(restaurantId) {
+  document.getElementById("leaderboard-section").style.display = "none";
+  document.getElementById("restaurants-section").style.display = "none";
+  document.getElementById("detail-section").style.display = "";
+
+  try {
+    const [restaurant, leaderboard] = await Promise.all([
+      fetchRestaurantDetail(restaurantId),
+      fetchLeaderboard(),
+    ]);
+    const entry = leaderboard.find(e => e.restaurant_id === restaurantId);
+    buildDetailView(restaurant, entry);
+  } catch (e) {
+    document.getElementById("detail-loading").style.display = "none";
+    const errEl = document.getElementById("detail-error");
+    errEl.textContent = e.message || "Could not load restaurant.";
+    errEl.style.display = "";
+  }
+}
+
+function buildDetailView(restaurant, leaderboardEntry) {
+  document.getElementById("detail-loading").style.display = "none";
+
+  const rid = restaurant.restaurant_id;
+  const name = restaurant.name || rid;
+  const address = restaurant.address || "";
+  const neighborhood = restaurant.neighborhood || "";
+  const phone = restaurant.phone || "";
+  const website = restaurant.website || "";
+  const style = restaurant.style || "";
+  const description = restaurant.description || "";
+  const lat = restaurant.lat || "";
+  const lng = restaurant.lng || "";
+
+  const rank = leaderboardEntry ? leaderboardEntry.rank : null;
+  const score = leaderboardEntry ? Number(leaderboardEntry.bayesian_score) : null;
+  const voteCount = leaderboardEntry ? leaderboardEntry.rating_count : null;
+
+  const rankHtml = rank
+    ? `<span class="detail-rank">#${rank} ranked</span>`
+    : `<span class="detail-rank unranked">Unranked</span>`;
+
+  const scoreHtml = score !== null
+    ? `<div class="detail-score">${score.toFixed(2)} ★ <span class="detail-votes">(${voteCount} ${voteCount === 1 ? "rating" : "ratings"})</span></div>`
+    : `<div class="detail-score muted">No ratings yet — be the first!</div>`;
+
+  // Map embed: prefer address, fall back to restaurant name search.
+  const mapQuery = address
+    ? `${address}, Memphis, TN`
+    : `${name}, Memphis, TN`;
+  const mapsKey = CONFIG.google_maps_api_key || "";
+  const mapSrc = `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(mapsKey)}&q=${encodeURIComponent(mapQuery)}`;
+
+  const streetViewHtml = (lat && lng && mapsKey)
+    ? `<div class="map-container">
+        <div class="map-label">Street View</div>
+        <iframe src="https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(mapsKey)}&location=${encodeURIComponent(lat + "," + lng)}" allowfullscreen loading="lazy"></iframe>
+      </div>`
+    : "";
+
+  const isAuthed = !!ACCESS_TOKEN;
+  const submitLabel = isAuthed ? "Submit rating" : "Sign in to rate";
+  const submitClass = isAuthed ? "submit-btn" : "submit-btn login-prompt";
+
+  let factsHtml = "";
+  if (address) factsHtml += `<dt>Address</dt><dd>${escHtml(address)}${neighborhood ? `, ${escHtml(neighborhood)}` : ""}</dd>`;
+  if (phone) factsHtml += `<dt>Phone</dt><dd><a href="tel:${escHtml(phone)}">${escHtml(phone)}</a></dd>`;
+  if (website) factsHtml += `<dt>Website</dt><dd><a href="${escHtml(website)}" target="_blank" rel="noopener noreferrer">${escHtml(website.replace(/^https?:\/\//, ""))}</a></dd>`;
+
+  const content = document.getElementById("detail-content");
+  content.innerHTML = `
+    <div class="detail-hero">
+      <h1 class="detail-name">${escHtml(name)}</h1>
+      <div class="detail-meta">
+        ${rankHtml}
+        ${style ? `<span class="detail-style">${escHtml(style)}</span>` : ""}
+      </div>
+      ${scoreHtml}
+    </div>
+    <div class="detail-body">
+      <div class="detail-info">
+        ${description ? `<p class="detail-description">${escHtml(description)}</p>` : ""}
+        ${factsHtml ? `<dl class="detail-facts">${factsHtml}</dl>` : ""}
+        <div class="detail-rating-section">
+          <div class="detail-rating-label">Your rating</div>
+          <div class="stars" id="stars-${rid}">
+            ${[1,2,3,4,5].map(n =>
+              `<span class="star" data-rid="${rid}" data-score="${n}" onclick="selectStar('${rid}',${n})" onmouseover="hoverStar('${rid}',${n})" onmouseout="unhoverStar('${rid}')">★</span>`
+            ).join("")}
+          </div>
+          <button class="${submitClass}" data-rid="${rid}" onclick="handleSubmit('${rid}')" ${isAuthed ? "disabled" : ""}>${submitLabel}</button>
+          <div class="card-status" id="status-${rid}"></div>
+        </div>
+      </div>
+      <div class="detail-maps">
+        ${mapsKey ? `<div class="map-container">
+          <div class="map-label">Map</div>
+          <iframe src="${mapSrc}" allowfullscreen loading="lazy"></iframe>
+        </div>` : ""}
+        ${streetViewHtml}
+      </div>
+    </div>
+  `;
+  content.style.display = "";
+}
+
 // --- Rendering ---
 
 function renderLeaderboard(leaderboard, restaurants) {
@@ -199,7 +325,7 @@ function renderLeaderboard(leaderboard, restaurants) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="rank-cell ${rank <= 3 ? `rank-${rank}` : ""}">${rankLabel(rank)}</td>
-      <td>${escHtml(name)}</td>
+      <td><a href="?restaurant=${encodeURIComponent(entry.restaurant_id)}" style="color:inherit;text-decoration:none;font-weight:600">${escHtml(name)}</a></td>
       <td class="score-cell">
         <div class="score-bar-wrap">
           <div class="score-bar"><div class="score-bar-fill" style="width:${pct}%"></div></div>
@@ -255,33 +381,27 @@ function renderRestaurants(restaurants, leaderboard) {
 function buildRestaurantCard(restaurant, rank) {
   const rid = restaurant.restaurant_id;
   const name = restaurant.name || rid;
-  const location = restaurant.location || "";
+  const address = restaurant.address || restaurant.location || "";
+  const neighborhood = restaurant.neighborhood || "";
+  const style = restaurant.style || "";
 
   const card = document.createElement("div");
   card.className = "restaurant-card";
   card.id = `card-${rid}`;
+  card.style.cursor = "pointer";
+  card.onclick = () => { window.location.href = `?restaurant=${encodeURIComponent(rid)}`; };
 
   const badgeHtml = rank
     ? `<span class="card-badge ranked">#${rank} ranked</span>`
     : `<span class="card-badge">Unranked</span>`;
 
-  const isAuthed = !!ACCESS_TOKEN;
-  const submitLabel = isAuthed ? "Submit rating" : "Sign in to rate";
-  const submitClass = isAuthed ? "submit-btn" : "submit-btn login-prompt";
+  const locationLine = [address, neighborhood].filter(Boolean).join(", ");
 
   card.innerHTML = `
     <div class="restaurant-name">${escHtml(name)}</div>
-    ${location ? `<div class="restaurant-location">${escHtml(location)}</div>` : ""}
+    ${locationLine ? `<div class="restaurant-location">${escHtml(locationLine)}</div>` : ""}
+    ${style ? `<div class="restaurant-location" style="font-style:italic">${escHtml(style)}</div>` : ""}
     ${badgeHtml}
-    <div class="rating-section">
-      <div class="stars" id="stars-${rid}">
-        ${[1,2,3,4,5].map(n =>
-          `<span class="star" data-rid="${rid}" data-score="${n}" onclick="selectStar('${rid}', ${n})" onmouseover="hoverStar('${rid}', ${n})" onmouseout="unhoverStar('${rid}')">★</span>`
-        ).join("")}
-      </div>
-      <button class="${submitClass}" data-rid="${rid}" onclick="handleSubmit('${rid}')" ${isAuthed ? "disabled" : ""}>${submitLabel}</button>
-      <div class="card-status" id="status-${rid}"></div>
-    </div>
   `;
 
   return card;
