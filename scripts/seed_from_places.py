@@ -34,8 +34,24 @@ PLACES_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json"
 DETAIL_FIELDS = "name,formatted_address,formatted_phone_number,website,geometry,address_components"
 
 SEARCH_QUERIES = [
+    # Broad sweeps
     "BBQ restaurants in Shelby County TN",
     "barbecue restaurants Memphis TN",
+    # Geographic area sweeps to catch suburban locations missed by city-center results
+    "BBQ restaurants Germantown TN",
+    "BBQ restaurants Bartlett TN",
+    "BBQ restaurants Cordova TN",
+    "BBQ restaurants Collierville TN",
+    "BBQ restaurants Millington TN",
+    "BBQ restaurants Arlington TN",
+    # Chain-specific searches to ensure all individual locations are captured
+    "Tops BBQ Memphis TN",
+    "Corky's Ribs BBQ Memphis TN",
+    "One and Only BBQ Memphis TN",
+    "Central BBQ Memphis TN",
+    "Jim Neely's Interstate Bar-B-Que Memphis TN",
+    "Marlowe's Ribs Restaurant Memphis TN",
+    "Memphis BBQ Company Memphis TN",
 ]
 
 
@@ -107,12 +123,24 @@ def fetch_details(api_key: str, place_id: str) -> dict:
     return data.get("result", {})
 
 
-def extract_neighborhood(address_components: list) -> str:
+def extract_component(address_components: list, *types: str) -> str:
     for comp in address_components:
-        types = comp.get("types", [])
-        if "neighborhood" in types or "sublocality_level_1" in types:
+        if any(t in comp.get("types", []) for t in types):
             return comp.get("long_name", "")
     return ""
+
+
+def extract_short_component(address_components: list, *types: str) -> str:
+    for comp in address_components:
+        if any(t in comp.get("types", []) for t in types):
+            return comp.get("short_name", "")
+    return ""
+
+
+def extract_street_slug(address_components: list) -> str:
+    """Return a slug suffix from the street name, e.g. 'summer-ave'."""
+    route = extract_component(address_components, "route")
+    return slugify(route) if route else ""
 
 
 def build_item(place_id: str, detail: dict) -> dict | None:
@@ -120,20 +148,33 @@ def build_item(place_id: str, detail: dict) -> dict | None:
     if not name:
         return None
 
-    slug = slugify(name)
+    address_components = detail.get("address_components", [])
+
+    # Filter to Tennessee only — exclude Mississippi (Southaven) and other states.
+    state = extract_short_component(address_components, "administrative_area_level_1")
+    if state and state != "TN":
+        print(f"  SKIP out-of-state ({state}): {name!r}")
+        return None
+
+    # Skip corporate offices and non-restaurant entries.
+    if any(kw in name.lower() for kw in ("corporate office", "corporate offices", "headquarters")):
+        print(f"  SKIP non-restaurant: {name!r}")
+        return None
+
+    base_slug = slugify(name)
 
     # Slug must satisfy the same regex used by admin_create_restaurant:
     # lowercase alphanumeric + hyphens, no leading/trailing hyphens, min 3 chars.
-    if not re.match(r"^[a-z0-9][a-z0-9\-]+[a-z0-9]$", slug):
-        print(f"  SKIP slug invalid: '{slug}' (name: {name!r})")
+    if not re.match(r"^[a-z0-9][a-z0-9\-]+[a-z0-9]$", base_slug):
+        print(f"  SKIP slug invalid: '{base_slug}' (name: {name!r})")
         return None
 
     location = detail.get("geometry", {}).get("location", {})
-    address_components = detail.get("address_components", [])
+    neighborhood = extract_component(address_components, "neighborhood", "sublocality_level_1")
     now = datetime.now(timezone.utc).isoformat()
 
     item = {
-        "restaurant_id": slug,
+        "restaurant_id": base_slug,  # may be updated below if collision
         "name": name,
         "place_id": place_id,
         "created_at": now,
@@ -142,16 +183,38 @@ def build_item(place_id: str, detail: dict) -> dict | None:
 
     for field, value in [
         ("address", detail.get("formatted_address", "")),
-        ("neighborhood", extract_neighborhood(address_components)),
+        ("neighborhood", neighborhood),
         ("phone", detail.get("formatted_phone_number", "")),
         ("website", detail.get("website", "")),
         ("lat", str(location.get("lat", ""))),
         ("lng", str(location.get("lng", ""))),
+        ("_street_slug", extract_street_slug(address_components)),  # temp field for collision resolution
     ]:
         if value:
             item[field] = value
 
     return item
+
+
+def resolve_slug(item: dict, seen_slugs: set[str]) -> str | None:
+    """Return a unique slug for the item, disambiguating by street name if needed."""
+    base = item["restaurant_id"]
+    if base not in seen_slugs:
+        return base
+
+    street = item.pop("_street_slug", "")
+    if street:
+        candidate = f"{base}-{street}"
+        if re.match(r"^[a-z0-9][a-z0-9\-]+[a-z0-9]$", candidate) and candidate not in seen_slugs:
+            return candidate
+
+    # Last resort: append incrementing suffix
+    for i in range(2, 20):
+        candidate = f"{base}-{i}"
+        if candidate not in seen_slugs:
+            return candidate
+
+    return None
 
 
 def seed(env: str, api_key: str, dry_run: bool = False) -> None:
@@ -175,14 +238,16 @@ def seed(env: str, api_key: str, dry_run: bool = False) -> None:
         if not item:
             continue
 
-        slug = item["restaurant_id"]
-        if slug in seen_slugs:
-            print(f"  SKIP duplicate slug: {slug}")
+        slug = resolve_slug(item, seen_slugs)
+        if not slug:
+            print(f"  SKIP could not resolve unique slug for: {item.get('name')}")
             continue
 
+        item["restaurant_id"] = slug
+        item.pop("_street_slug", None)  # remove temp field before writing
         seen_slugs.add(slug)
         items.append(item)
-        print(f"  {slug:<45} {item.get('name', '')}")
+        print(f"  {slug:<50} {item.get('name', '')}")
 
         time.sleep(0.1)  # light rate limiting between Detail calls
 
