@@ -1,71 +1,178 @@
 # Memphis BBQ Ranking Platform
 
-Crowdsourced restaurant ranking platform with abuse controls and reproducible infrastructure.
-A full-stack, secure, cloud-native app built as a DevSecOps portfolio project.
+A serverless AWS restaurant ranking platform for Memphis BBQ restaurants, built with Terraform-managed infrastructure, GitHub Actions CI/CD, Cognito authentication, DynamoDB, and automated quality/security checks.
 
-_The BBQ is a Trojan horse. The real demo is the infrastructure, security posture, and CI/CD pipeline._
-
-> **Status:** Currently in Phase 2 — core API endpoints. Phase 3 adds WAF, abuse controls, and security hardening.
+The application lets users view Memphis BBQ restaurants, see location details, and submit ratings. The technical focus is on building a practical cloud application with reproducible infrastructure, automated deployment, authentication, observability, and secure-by-default configuration.
 
 ---
 
-## Portfolio Highlights
+## Project Overview
 
-- Terraform IaC: multi-environment (dev/prod), remote state, zero manual console clicks
-- CI/CD via GitHub Actions + OIDC — no static AWS credentials anywhere
-- Auth via Cognito with least-privilege IAM per component
-- WAF + rate limiting for public-facing abuse protection
-- Structured JSON logs, CloudWatch alarms, cost controls
-- Threat model documented; security controls traceable to specific risks
+This project combines a simple local restaurant-ranking idea with a realistic cloud architecture.
+
+The application includes:
+
+* Restaurant listings for Memphis BBQ locations
+* Individual restaurant detail pages
+* User authentication through Amazon Cognito
+* User ratings with one rating per user per restaurant
+* Leaderboard-style ranking
+* Google Maps and Street View integration
+* Infrastructure managed through Terraform
+* CI/CD through GitHub Actions
+* Automated checks for code quality, dependency issues, and infrastructure misconfiguration
 
 ---
 
-## Architecture Decisions
+## Technical Goals
 
-- **Compute:** AWS Lambda + API Gateway (HTTP API)
-- **Language:** Python
-- **Database:** DynamoDB — see data model below
-- **Auth:** Cognito (user pools, JWT, `sub` as identity, email as attribute)
-- **Frontend:** S3 + CloudFront
-- **IaC:** Terraform
-- **CI/CD:** GitHub Actions + OIDC (no long-lived keys)
-- **Secrets:** SSM Parameter Store Standard (no Secrets Manager — rotation not required)
-- **Environments:** dev and prod (`infra/envs/dev`, `infra/envs/prod`)
-- **AWS Region:** us-east-1 exclusively
-- **Single AWS account**
-- **Naming convention:** `${app}-${env}-${resource}`
-- **API versioning:** `/v1/`
-- **All endpoints authenticated**
-- **Log retention:** dev 14 days, prod 60–90 days
-- **Logs:** JSON structured via CloudWatch (Lambda default); fields: level, message, requestId, userSub, route, statusCode, latencyMs, restaurantId (no PII)
-- **Alarms:** Lambda errors > 0 for 5 min; 5xx rate on API Gateway
-- **Ranking algorithm:** Bayesian average (fair to low-vote-count restaurants)
-- **Auth flow:** API Gateway JWT authorizer → Cognito User Pool (issuer/audience); Lambda reads `sub` from `event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]`
-- **Cognito UI:** Hosted UI for MVP; custom UI optional later
-- **Each environment has its own Cognito User Pool** (never shared between dev/prod)
+The main goals of this project are to practice and document:
+
+* Serverless application architecture on AWS
+* Infrastructure as Code with Terraform
+* Multi-environment deployment patterns
+* CI/CD with GitHub Actions
+* OIDC-based AWS authentication without long-lived access keys
+* Cognito-based user authentication
+* DynamoDB data modeling
+* Secure IAM design
+* API Gateway and Lambda integration
+* CloudWatch logging and monitoring
+* Automated quality and security checks before deployment
+
+---
+
+## Architecture
+
+### Core AWS Services
+
+* **AWS Lambda** for backend API functions
+* **API Gateway HTTP API** for API routing
+* **DynamoDB** for restaurant, rating, and leaderboard data
+* **Amazon Cognito** for authentication
+* **S3** for static frontend hosting
+* **CloudFront** for content delivery
+* **CloudWatch** for logs, metrics, and alarms
+* **IAM** for least-privilege access between components
+
+### Infrastructure and Deployment
+
+* **Terraform** manages AWS infrastructure
+* **GitHub Actions** runs CI/CD workflows
+* **OIDC federation** allows GitHub Actions to deploy without static AWS credentials
+* Separate **dev** and **prod** environments are managed in Terraform
+* Automated checks run before deployment
+
+---
+
+## Application Stack
+
+* **Backend:** Python Lambda functions
+* **Frontend:** Static HTML, CSS, and JavaScript
+* **Database:** DynamoDB
+* **Authentication:** Cognito User Pools
+* **Infrastructure:** Terraform
+* **CI/CD:** GitHub Actions
+* **Security/Quality Checks:** Checkov, pip-audit, ruff, pytest
+* **Monitoring:** CloudWatch
+
+---
+
+## Key Features
+
+### Restaurant Data
+
+The app stores and displays Memphis BBQ restaurant information, including basic details, contact information, and location data.
+
+### Restaurant Detail Pages
+
+Each restaurant can have an individual page with store details, map integration, and Street View support.
+
+### Authenticated Ratings
+
+Users authenticate through Cognito before submitting ratings. Cognito `sub` values are used as stable user identifiers.
+
+### Leaderboard
+
+Ratings are used to generate a leaderboard-style view of restaurants. The project is designed around read-optimized access patterns rather than scanning raw rating data for every leaderboard request.
+
+### Multi-Environment Infrastructure
+
+The project supports separate dev and prod environments through Terraform environment directories.
+
+### Automated Deployment
+
+GitHub Actions handles deployment steps and uses OIDC authentication to assume AWS roles without storing long-lived AWS access keys in GitHub.
+
+---
+
+## Security and Reliability Practices
+
+This project includes several security-minded and operations-focused practices:
+
+* Least-privilege IAM roles for AWS components
+* No long-lived AWS credentials in GitHub Actions
+* Cognito-based authentication
+* Environment separation between dev and prod
+* Terraform-managed infrastructure
+* Automated infrastructure checks with Checkov
+* Python dependency scanning with pip-audit
+* Linting with ruff
+* Unit tests with pytest
+* CloudWatch logs and alarms
+* Structured logging for easier troubleshooting
+* Cost-conscious serverless architecture
 
 ---
 
 ## Data Model
 
-| Table | PK | SK | Purpose |
-|---|---|---|---|
-| `restaurants` | `restaurant_id` (slug) | — | Name, location, metadata |
-| `ratings` | `user_id` (Cognito sub) | `restaurant_id` | Score 1–5, timestamps — PK/SK combo enforces one rating per user per restaurant |
-| `rating_events` | `restaurant_id` | `created_at` | Append-only audit log of all rating changes |
-| `leaderboard_snapshot` | `scope` (e.g. `memphis#all`) | `rank` | Denormalized read-optimized snapshot; updated inline on write now, via DynamoDB Streams later |
+### `restaurants`
 
-Notes:
-- `users` table not needed — Cognito is the identity store; `sub` is the user key everywhere
-- Leaderboard reads always hit `leaderboard_snapshot` (never scan `ratings` for hot reads)
-- `leaderboard_snapshot` response includes a `version` field to enable polling clients and future push upgrades
-- Stable `restaurant_id` slug (e.g., `paynes-bar-b-que`) used everywhere; display name is an attribute
+Stores restaurant metadata.
+
+* `restaurant_id`
+* name
+* location details
+* contact information
+* display metadata
+
+### `ratings`
+
+Stores the current rating from a user for a restaurant.
+
+* partition key: `user_id`
+* sort key: `restaurant_id`
+* score
+* timestamps
+
+This structure enforces one active rating per user per restaurant.
+
+### `rating_events`
+
+Stores append-only rating history for auditing and future analysis.
+
+* `restaurant_id`
+* `created_at`
+* user identifier
+* score
+* event metadata
+
+### `leaderboard_snapshot`
+
+Stores read-optimized ranking data.
+
+* `scope`
+* `rank`
+* restaurant summary
+* rating summary
+* version metadata
 
 ---
 
 ## Directory Structure
 
-```
+```text
 /app
   /lambdas
     health/
@@ -76,6 +183,7 @@ Notes:
   /shared
     auth.py
     models.py
+
 /infra
   /modules
     api_http/
@@ -92,6 +200,7 @@ Notes:
       main.tf
       variables.tf
       terraform.tfvars
+
 /docs
   roadmap.md
   01-product-brief.md
@@ -99,4 +208,49 @@ Notes:
   03-threat-model.md
   04-cost-estimate.md
   /adr
+
+/scripts
+/static
 ```
+
+---
+
+## CI/CD Checks
+
+The deployment workflow is designed to verify the application and infrastructure before deployment.
+
+Checks include:
+
+* Terraform validation
+* Terraform planning
+* Checkov scan for infrastructure misconfiguration
+* Python linting with ruff
+* Dependency vulnerability scan with pip-audit
+* Unit tests with pytest
+
+---
+
+## Current Status
+
+This project is an active hands-on cloud application build. The core serverless architecture, Terraform infrastructure, authentication flow, API endpoints, and deployment automation are in place. Ongoing work includes additional restaurant detail features, ranking improvements, monitoring refinements, and continued hardening.
+
+---
+
+## What This Project Demonstrates
+
+This project demonstrates practical experience with:
+
+* Designing a small cloud-native application
+* Building AWS infrastructure with Terraform
+* Structuring serverless APIs with Lambda and API Gateway
+* Modeling application data in DynamoDB
+* Using Cognito for authentication
+* Deploying with GitHub Actions and OIDC
+* Applying automated security and quality checks
+* Thinking through operational concerns like logs, monitoring, cost, and reliability
+
+---
+
+## License
+
+MIT
