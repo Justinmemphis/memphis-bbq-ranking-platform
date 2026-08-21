@@ -1,5 +1,7 @@
 # Memphis BBQ Ranking Platform
 
+NOTE 08/21/2026 - below is mostly what I had an AI write for me on this project.  It did okay but sometimes it's not accurate or up-to-date on things.  I'll be rewriting this some time in the future in my own voice.
+
 A serverless AWS restaurant ranking platform for Memphis BBQ restaurants, built with Terraform-managed infrastructure, GitHub Actions CI/CD, Cognito authentication, DynamoDB, and automated quality/security checks.
 
 The application lets users view Memphis BBQ restaurants, see location details, and submit ratings. The technical focus is on building a practical cloud application with reproducible infrastructure, automated deployment, authentication, observability, and secure-by-default configuration.
